@@ -3,6 +3,6 @@
 int main()
 {
 	Pendulum pendulum;
-
+	
 	return pendulum.run();
 }
