@@ -42,6 +42,7 @@ private:
 	double actualSecondAng = 0;
 	double secondSpeed = -2.5; //it does x rotations around the first arm for each first arm rotation
 	std::vector<sf::Vertex> secondTray;
+	bool drawSecond = true;
 
 	sf::CircleShape thirdStart;
 	sf::RectangleShape thirdBody;
@@ -51,5 +52,6 @@ private:
 	double actualThirdAng = 0;
 	double thirdSpeed = 5; //it does x rotations around the second arm for each first arm rotation
 	std::vector<sf::Vertex> thirdTray;
+	bool drawThird = true;
 };
 

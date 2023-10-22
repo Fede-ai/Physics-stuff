@@ -68,6 +68,9 @@ int Pendulum::run()
 				window.close();
 				break;
 			case sf::Event::KeyPressed:
+				double thirdBefore = thirdSpeed;
+				double secondBefore = secondSpeed;
+
 				if (event.key.code == sf::Keyboard::R)
 				{
 					firstAng = 0;
@@ -76,22 +79,21 @@ int Pendulum::run()
 					secondTray.clear();
 					thirdTray.clear();
 				}
-
-				if (event.key.code == sf::Keyboard::Q)
+				else if (event.key.code == sf::Keyboard::X)
+					drawSecond = !drawSecond;
+				else if (event.key.code == sf::Keyboard::C)
+					drawThird = !drawThird;
+				else if (event.key.code == sf::Keyboard::Q)
 					firstSpeed = std::min(double(3), firstSpeed + 0.1);
-				if (event.key.code == sf::Keyboard::A)
+				else if (event.key.code == sf::Keyboard::A)
 					firstSpeed = std::max(double(-3), firstSpeed - 0.1);
-
-				double secondBefore = secondSpeed;
-				if (event.key.code == sf::Keyboard::W)
+				else if (event.key.code == sf::Keyboard::W)
 					secondSpeed = std::min(double(5), secondSpeed + 0.1);
-				if (event.key.code == sf::Keyboard::S)
+				else if (event.key.code == sf::Keyboard::S)
 					secondSpeed = std::max(double(-5), secondSpeed - 0.1);
-
-				double thirdBefore = thirdSpeed;
-				if (event.key.code == sf::Keyboard::E)
+				else if (event.key.code == sf::Keyboard::E)
 					thirdSpeed = std::min(double(5), thirdSpeed + 0.1);
-				if (event.key.code == sf::Keyboard::D)
+				else if (event.key.code == sf::Keyboard::D)
 					thirdSpeed = std::max(double(-5), thirdSpeed - 0.1);
 
 				if (secondBefore != secondSpeed)
@@ -147,12 +149,14 @@ void Pendulum::draw()
 	window.draw(secondStart);
 	window.draw(secondBody);
 	window.draw(secondEnd);
-	window.draw(&secondTray[0], secondTray.size(), sf::LinesStrip);
+	if (drawSecond)
+		window.draw(&secondTray[0], secondTray.size(), sf::LinesStrip);
 
 	window.draw(thirdStart);
 	window.draw(thirdBody);
 	window.draw(thirdEnd);
-	window.draw(&thirdTray[0], thirdTray.size(), sf::LinesStrip);
+	if (drawThird)
+		window.draw(&thirdTray[0], thirdTray.size(), sf::LinesStrip);
 
 	std::string v1str = std::to_string(int(round(firstSpeed * 10)));
 	if (abs(round(firstSpeed * 10) / 10) < 1)
