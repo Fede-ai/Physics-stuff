@@ -13,7 +13,7 @@ Pendulum::Pendulum()
 	background.setPrimitiveType(sf::TriangleFan);
 	background.resize(n + 1);
 	background[0].position = sf::Vector2f(0, 0);
-	background[0].color = sf::Color(0, 120, 120);
+	background[0].color = sf::Color(0, 200, 200);
 	int radius = 775;
 	for (int i = 0; i < n; i++)
 	{
@@ -53,6 +53,7 @@ Pendulum::Pendulum()
 
 int Pendulum::run()
 {
+	bool isFullscreen = false;
 	window.create(sf::VideoMode(windowSize.x, windowSize.y), "Pendulum", sf::Style::Default, settings);
 	window.setView(sf::View(sf::Vector2f(0, 0), sf::Vector2f(1920, 1080)));
 	window.setFramerateLimit(60);
@@ -78,6 +79,19 @@ int Pendulum::run()
 					thirdAng = 0;
 					secondTray.clear();
 					thirdTray.clear();
+				}
+				else if (event.key.code == sf::Keyboard::Enter)
+				{
+					if (event.key.alt)
+					{
+						if (!isFullscreen)
+							window.create(sf::VideoMode::getDesktopMode(), "Pendulum", sf::Style::Fullscreen, settings);
+						else
+							window.create(sf::VideoMode(windowSize.x, windowSize.y), "Pendulum", sf::Style::Default, settings);
+						window.setView(sf::View(sf::Vector2f(0, 0), sf::Vector2f(1920, 1080)));
+						window.setFramerateLimit(60);
+						isFullscreen = !isFullscreen;
+					}
 				}
 				else if (event.key.code == sf::Keyboard::X)
 					drawSecond = !drawSecond;
