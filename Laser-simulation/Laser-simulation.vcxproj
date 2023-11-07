@@ -130,11 +130,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\laser.cpp" />
     <ClCompile Include="src\wall.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\simulation.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\laser.h" />
     <ClInclude Include="src\wall.h" />
     <ClInclude Include="src\simulation.h" />
   </ItemGroup>

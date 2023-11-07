@@ -43,7 +43,7 @@ int Simulation::run()
 
 		window.clear(sf::Color(150, 150, 150));
 
-		update();
+		move();
 		draw();
 
 		window.display();
@@ -52,7 +52,7 @@ int Simulation::run()
 	return 0;
 }
 
-void Simulation::update()
+void Simulation::move()
 {
 	sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
@@ -60,31 +60,55 @@ void Simulation::update()
 		buildingType = 'r';
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num2))
 		buildingType = 'n';
-	if (buildingType != ' ')
+	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num3))
+		buildingType = 'l';
+
+	//create new walls
+	if (buildingType == 'r' || buildingType == 'n')
 	{		
+		//create-modify in-construction wall
 		if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
 		{
+			//create a new wall
 			if (isBuilding == false)
 			{
 				sf::RectangleShape newBuilding;
+				newBuilding.setOrigin(0, wallThickness / 2);
 				newBuilding.setPosition(mousePos);
 				building = newBuilding;
 				isBuilding = true;
 			}
+			//tilt and stretch the wall 
 			sf::Vector2f diff(mousePos - building.getPosition());
-			building.setSize(sf::Vector2f(sqrt(std::pow(diff.x, 2) + std::pow(diff.y, 2)), 4));
+			building.setSize(sf::Vector2f(sqrt(std::pow(diff.x, 2) + std::pow(diff.y, 2)), wallThickness));
 			float ang = atan(diff.y / diff.x) * 180 / PI;
 			if (mousePos.x < building.getPosition().x)
 				ang -= 180;
 			building.setRotation(ang);
 		}
+		//conferm wall and stop building
 		else if (isBuilding == true)
 		{
 			isBuilding = false;
-			blocks.push_back(Wall(building, buildingType));
+			walls.push_back(Wall(building, buildingType));
 			buildingType = ' ';
 		}
 	}
+	//create new lasers
+	if (buildingType == 'l')
+	{
+		if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
+		{
+			lasers.push_back(Laser(mousePos));
+			buildingType = ' ';
+		}
+	}
+
+	for (auto& laser : lasers)
+		laser.move(mousePos, lastMousePos);
+
+	for (auto& laser : lasers)
+		laser.updateLaser(walls);
 
 	lastMousePos = mousePos;
 }
@@ -92,10 +116,13 @@ void Simulation::update()
 void Simulation::draw()
 {
 	window.draw(background);
-	for (auto block : blocks)
-	{
-		block.draw(window);
-	}
+
+	for (auto wall : walls)
+		wall.draw(window);
+
 	if (isBuilding)
 		window.draw(building);
+
+	for (auto laser : lasers)
+		laser.draw(window);
 }

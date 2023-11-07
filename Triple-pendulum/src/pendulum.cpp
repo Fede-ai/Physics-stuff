@@ -124,7 +124,7 @@ int Pendulum::run()
 
 		window.clear();
 		
-		update();
+		move();
 		draw();
 
 		window.display();
@@ -133,7 +133,7 @@ int Pendulum::run()
 	return 0;
 }
 
-void Pendulum::update()
+void Pendulum::move()
 {
 	firstAng += firstSpeed;
 	firstBody.setRotation(firstAng);

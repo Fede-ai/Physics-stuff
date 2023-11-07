@@ -1,5 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include "wall.h"
+#include "laser.h"
 
 class Simulation
 {
@@ -8,7 +9,7 @@ public:
 	int run();
 
 private:
-	void update();
+	void move();
 	void draw();
 
 	sf::RenderWindow window;
@@ -21,6 +22,8 @@ private:
 
 	char buildingType = ' ';
 	bool isBuilding = false;
+	float wallThickness = 6;
 
-	std::vector<Wall> blocks;
+	std::vector<Wall> walls;
+	std::vector<Laser> lasers;
 };

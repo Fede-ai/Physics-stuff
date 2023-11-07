@@ -9,7 +9,7 @@ public:
 	int run();
 
 private:
-	void update();
+	void move();
 	void draw();
 
 	void moveSecond();
