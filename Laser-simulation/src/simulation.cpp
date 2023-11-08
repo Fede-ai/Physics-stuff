@@ -38,6 +38,9 @@ int Simulation::run()
 			case sf::Event::Closed:
 				window.close();
 				break;
+			case sf::Event::MouseButtonPressed:
+				if (event.mouseButton.button == sf::Mouse::Left)
+					clickEvent = true;
 			}
 		}
 
@@ -57,11 +60,27 @@ void Simulation::move()
 	sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num1))
-		buildingType = 'r';
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num2))
-		buildingType = 'n';
-	if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num3))
-		buildingType = 'l';
+	{
+		if (canSelectBuilding)
+			buildingType = 'r';
+		canSelectBuilding = false;
+	}
+	else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num2))
+	{
+		if (canSelectBuilding)
+			buildingType = 'n';
+		canSelectBuilding = false;
+	}
+	else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num3))
+	{
+		if (canSelectBuilding)
+			buildingType = 'l';
+		canSelectBuilding = false;
+	}
+	else
+	{
+		canSelectBuilding = true;
+	}
 
 	//create new walls
 	if (buildingType == 'r' || buildingType == 'n')
@@ -72,6 +91,7 @@ void Simulation::move()
 			//create a new wall
 			if (isBuilding == false)
 			{
+				clickEvent = false;
 				sf::RectangleShape newBuilding;
 				newBuilding.setOrigin(0, wallThickness / 2);
 				newBuilding.setPosition(mousePos);
@@ -99,17 +119,29 @@ void Simulation::move()
 	{
 		if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
 		{
+			clickEvent = false;
 			lasers.push_back(Laser(mousePos));
 			buildingType = ' ';
 		}
 	}
 
 	for (auto& laser : lasers)
-		laser.move(mousePos, lastMousePos);
+	{
+		if (laser.hitbox().contains(mousePos) && clickEvent)
+		{
+			laser.move(true, mousePos, lastMousePos);
+			clickEvent = false;
+		}
+		else 
+		{
+			laser.move(false, mousePos, lastMousePos);
+		}
+	}
 
 	for (auto& laser : lasers)
 		laser.updateLaser(walls);
 
+	clickEvent = false;
 	lastMousePos = mousePos;
 }
 

@@ -31,7 +31,7 @@ Wall::Wall(sf::RectangleShape rect, char inType)
 void Wall::draw(sf::RenderWindow& window)
 {
 	window.draw(body);
-	window.draw(line);
+	//window.draw(line);
 }
 
 bool Wall::reflects()

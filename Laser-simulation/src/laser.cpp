@@ -4,17 +4,17 @@ constexpr auto PI = 3.14159265358979323846;
 
 Laser::Laser(sf::Vector2f pos)
 {
-	body.setSize(sf::Vector2f(100, 30));
-	body.setOrigin(50, 15);	
+	body.setSize(sf::Vector2f(60, 20));
+	body.setOrigin(30, 10);	
 	body.setPosition(pos);
 	body.setFillColor(sf::Color(30, 30, 30));
 
 	laser.setPrimitiveType(sf::LineStrip);
 }
 
-void Laser::move(sf::Vector2f pos, sf::Vector2f lastPos)
+void Laser::move(bool clicked, sf::Vector2f pos, sf::Vector2f lastPos)
 {
-	if (sf::Mouse::isButtonPressed(sf::Mouse::Left) && !wasClickingLeft && body.getGlobalBounds().contains(pos))
+	if (clicked)
 		isMoving = true;
 	else if (!sf::Mouse::isButtonPressed(sf::Mouse::Left) && isMoving)
 		isMoving = false;
@@ -37,43 +37,41 @@ void Laser::move(sf::Vector2f pos, sf::Vector2f lastPos)
 		if (ang < 0)
 			ang += 360;
 
-		//if (ang == 90 || ang == 270)
-		//	ang += 1;
-
 		body.setRotation(ang);
 	}
 
-	wasClickingLeft = sf::Mouse::isButtonPressed(sf::Mouse::Left);
 	wasClickingRight = sf::Mouse::isButtonPressed(sf::Mouse::Right);
 }
 
 void Laser::updateLaser(std::vector<Wall> walls)
 {
+	auto formatAng = [](float ang) {
+		while (ang < 0)
+			ang += 360;
+
+		while (ang >= 360)
+			ang -= 360;
+
+		return ang;
+	};
+
 	laser.clear();
 	laser.append(body.getPosition());
-	float m = tan(body.getRotation() * PI / 180); 
-	float q = body.getPosition().y - m * body.getPosition().x;
+	float ang = body.getRotation();
+	int lastBounceWall = -1;
 
-	for (auto wall : walls)
+	while (true)
 	{
-		//std::cout << body.getRotation() << "\n";
-		sf::Vector2f i = intersection(m, q, wall.m, wall.q);
-		if (contains(wall.p1, wall.p2, i))
-		{
-			if (((body.getRotation() < 90 || body.getRotation() > 270) && i.x > body.getPosition().x) ||
-				(body.getRotation() > 90 && body.getRotation() < 270 && i.x < body.getPosition().x))
-			{
-				laser.append(i);
-				break;
-			}
-		}
+		const auto info = findCollision(walls, laser[laser.getVertexCount()-1].position, ang, lastBounceWall);
+
+		laser.append(info.first);
+
+		lastBounceWall = info.second;
+		if (lastBounceWall == -1)
+			break;
+
+		ang = formatAng(findNewAngle(ang, walls[info.second]));
 	}
-
-
-	//while (!isEnded)
-	//{
-	//
-	//}
 }
 
 void Laser::draw(sf::RenderWindow& window)
@@ -82,24 +80,95 @@ void Laser::draw(sf::RenderWindow& window)
 	window.draw(body);
 }
 
-sf::Vector2f Laser::intersection(float m1, float q1, float m2, float q2)
+sf::FloatRect Laser::hitbox()
 {
-	float x = (q2 - q1) / (m1 - m2);
-	float y = m1 * x + q1;
-
-	return sf::Vector2f(x, y);
+	return body.getGlobalBounds();
 }
 
-bool Laser::contains(sf::Vector2f p1, sf::Vector2f p2, sf::Vector2f p)
+std::pair<sf::Vector2f, int> Laser::findCollision(std::vector<Wall> walls, sf::Vector2f start, float ang, int exclude)
 {
-	float minX = std::min(p1.x, p2.x);
-	float maxX = std::max(p1.x, p2.x);
-	float minY = std::min(p1.y, p2.y);
-	float maxY = std::max(p1.y, p2.y);
+	auto intersection = [](float m1, float q1, float m2, float q2) {
+		float x = (q2 - q1) / (m1 - m2);
+		float y = m2 * x + q2;
 
-	//check the point is within the bounding box of the segment
-	if (p.x >= minX && p.x <= maxX && p.y >= minY && p.y <= maxY)
-		return true;
+		return sf::Vector2f(x, y);
+	};
+	auto contains = [](sf::Vector2f p1, sf::Vector2f p2, sf::Vector2f p) {
+		float minX = std::min(p1.x, p2.x);
+		float maxX = std::max(p1.x, p2.x);
+		float minY = std::min(p1.y, p2.y);
+		float maxY = std::max(p1.y, p2.y);
 
-	return false;
+		//check the point is within the bounding box of the segment
+		if (p.x >= minX && p.x <= maxX && p.y >= minY && p.y <= maxY)
+			return true;
+
+		return false;
+	};
+	auto dist = [](sf::Vector2f p1, sf::Vector2f p2) {
+		float dx = p2.x - p1.x;
+		float dy = p2.y - p1.y;
+		return sqrt(dx * dx + dy * dy);
+	};
+
+	//-1 means that the laser will not reflect,
+	//otherwise return the index of the wall with wich the laser collides
+	int nWall = -1;
+	sf::Vector2f closest;
+	bool collided = false;
+	
+	float mLaser = tan(ang * PI / 180);
+	float qLaser = - mLaser * start.x + start.y;
+	
+	for (int i = 0; i < walls.size(); i++)
+	{
+		if (i == exclude)
+			continue;
+
+		sf::Vector2f inter = intersection(mLaser, qLaser, walls[i].m, walls[i].q);
+		if (((ang < 90 || ang > 270) && inter.x > start.x) ||
+			(ang > 90 && ang < 270 && inter.x < start.x) ||
+			(ang == 270 && inter.y < start.y) || (ang == 90 && inter.y > start.y))
+		{
+			if (contains(walls[i].p1, walls[i].p2, inter))
+			{
+				if (collided == false)
+				{
+					closest = inter;
+					collided = true;
+					if (walls[i].reflects())
+						nWall = i;
+				}
+				else if (dist(start, inter) < dist(start, closest))
+				{
+					closest = inter;
+					if (walls[i].reflects())
+						nWall = i;
+				}
+			}
+		}
+	}
+
+	if (!collided)
+	{
+		if (ang == 0 || ang == 360)
+			closest = sf::Vector2f(1920, start.y);
+		else if (ang == 180)
+			closest = sf::Vector2f(0, start.y);
+		else if (ang < 180)
+			closest = sf::Vector2f((1080 - qLaser) / mLaser, 1080);
+		else if (ang > 180)
+			closest = sf::Vector2f(-qLaser / mLaser, 0);
+	}
+
+	return std::make_pair(closest, nWall);
+}
+
+float Laser::findNewAngle(float angBefore, Wall wall)
+{
+	float wallAng = atan(wall.m) * 180 / PI;
+	if (wallAng < 0)
+		wallAng = 180 + wallAng;
+
+	return wallAng * 2 - angBefore;
 }

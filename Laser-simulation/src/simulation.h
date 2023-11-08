@@ -22,7 +22,9 @@ private:
 
 	char buildingType = ' ';
 	bool isBuilding = false;
-	float wallThickness = 6;
+	bool canSelectBuilding = false;
+	float wallThickness = 4;
+	bool clickEvent = false;
 
 	std::vector<Wall> walls;
 	std::vector<Laser> lasers;
