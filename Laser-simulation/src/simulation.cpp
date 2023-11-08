@@ -1,4 +1,5 @@
 #include "simulation.h"
+#include <iostream>
 constexpr auto PI = 3.14159265358979323846;
 
 Simulation::Simulation()
@@ -109,6 +110,7 @@ void Simulation::move()
 		//conferm wall and stop building
 		else if (isBuilding == true)
 		{
+			updateNeeded = true;
 			isBuilding = false;
 			walls.push_back(Wall(building, buildingType));
 			buildingType = ' ';
@@ -119,6 +121,7 @@ void Simulation::move()
 	{
 		if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
 		{
+			updateNeeded = true;
 			clickEvent = false;
 			lasers.push_back(Laser(mousePos));
 			buildingType = ' ';
@@ -129,17 +132,23 @@ void Simulation::move()
 	{
 		if (laser.hitbox().contains(mousePos) && clickEvent)
 		{
-			laser.move(true, mousePos, lastMousePos);
+			if (laser.move(true, mousePos, lastMousePos))
+				updateNeeded = true;
 			clickEvent = false;
 		}
 		else 
 		{
-			laser.move(false, mousePos, lastMousePos);
+			if (laser.move(false, mousePos, lastMousePos))
+				updateNeeded = true;
 		}
 	}
 
-	for (auto& laser : lasers)
-		laser.updateLaser(walls);
+	if (updateNeeded)
+	{
+		for (auto& laser : lasers)
+			laser.updateLaser(walls);
+		updateNeeded = false;
+	}
 
 	clickEvent = false;
 	lastMousePos = mousePos;

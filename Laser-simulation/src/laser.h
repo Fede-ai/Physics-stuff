@@ -7,7 +7,7 @@ class Laser
 {
 public:
 	Laser(sf::Vector2f pos);
-	void move(bool clicked, sf::Vector2f pos, sf::Vector2f lastPos);
+	bool move(bool clicked, sf::Vector2f pos, sf::Vector2f lastPos);
 	void updateLaser(std::vector<Wall> walls);
 	void draw(sf::RenderWindow& window);
 	sf::FloatRect hitbox();

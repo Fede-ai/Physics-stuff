@@ -12,15 +12,20 @@ Laser::Laser(sf::Vector2f pos)
 	laser.setPrimitiveType(sf::LineStrip);
 }
 
-void Laser::move(bool clicked, sf::Vector2f pos, sf::Vector2f lastPos)
+bool Laser::move(bool clicked, sf::Vector2f pos, sf::Vector2f lastPos)
 {
+	bool needUpdate = false;
+
 	if (clicked)
 		isMoving = true;
 	else if (!sf::Mouse::isButtonPressed(sf::Mouse::Left) && isMoving)
 		isMoving = false;
 
 	if (isMoving)
+	{
+		needUpdate = true;		
 		body.move(pos - lastPos);
+	}
 
 	if (sf::Mouse::isButtonPressed(sf::Mouse::Right) && !wasClickingRight && body.getGlobalBounds().contains(pos) && !isMoving)
 		isRotating = true;
@@ -29,6 +34,7 @@ void Laser::move(bool clicked, sf::Vector2f pos, sf::Vector2f lastPos)
 
 	if (isRotating)
 	{
+		needUpdate = true;
 		sf::Vector2f diff = pos - body.getPosition();
 		float ang = atan(diff.y / diff.x) * 180 / PI;
 		if (pos.x < body.getPosition().x)
@@ -41,6 +47,7 @@ void Laser::move(bool clicked, sf::Vector2f pos, sf::Vector2f lastPos)
 	}
 
 	wasClickingRight = sf::Mouse::isButtonPressed(sf::Mouse::Right);
+	return needUpdate;
 }
 
 void Laser::updateLaser(std::vector<Wall> walls)
@@ -55,6 +62,7 @@ void Laser::updateLaser(std::vector<Wall> walls)
 		return ang;
 	};
 
+	int nBounces = 0;
 	laser.clear();
 	laser.append(body.getPosition());
 	float ang = body.getRotation();
@@ -70,8 +78,17 @@ void Laser::updateLaser(std::vector<Wall> walls)
 		if (lastBounceWall == -1)
 			break;
 
+		nBounces++;
 		ang = formatAng(findNewAngle(ang, walls[info.second]));
+
+		if (nBounces >= 200'000)
+		{
+			nBounces = -1;
+			break;
+		}
 	}
+
+	std::cout << "bounces: " << nBounces << "\n";
 }
 
 void Laser::draw(sf::RenderWindow& window)

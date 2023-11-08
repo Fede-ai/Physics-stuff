@@ -25,6 +25,7 @@ private:
 	bool canSelectBuilding = false;
 	float wallThickness = 4;
 	bool clickEvent = false;
+	bool updateNeeded = true;
 
 	std::vector<Wall> walls;
 	std::vector<Laser> lasers;
