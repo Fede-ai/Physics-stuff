@@ -21,7 +21,7 @@
     <ClCompile Include="src\simulation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\wall.cpp">
+    <ClCompile Include="src\block.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\laser.cpp">
@@ -32,7 +32,7 @@
     <ClInclude Include="src\simulation.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\wall.h">
+    <ClInclude Include="src\block.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\laser.h">

@@ -78,6 +78,16 @@ void Simulation::move()
 			buildingType = 'l';
 		canSelectBuilding = false;
 	}
+	else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num4)) {
+		if (canSelectBuilding)
+			buildingType = 's';
+		canSelectBuilding = false;
+	}
+	else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num5)) {
+		if (canSelectBuilding)
+			buildingType = 'f';
+		canSelectBuilding = false;
+	}
 	else
 	{
 		canSelectBuilding = true;
@@ -86,34 +96,69 @@ void Simulation::move()
 	//create new walls
 	if (buildingType == 'r' || buildingType == 'n')
 	{		
-		//create-modify in-construction wall
-		if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
+		if (isBuildingCircle == false)
 		{
-			//create a new wall
-			if (isBuilding == false)
+			//create-modify in-construction wall
+			if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
 			{
-				clickEvent = false;
-				sf::RectangleShape newBuilding;
-				newBuilding.setOrigin(0, wallThickness / 2);
-				newBuilding.setPosition(mousePos);
-				building = newBuilding;
-				isBuilding = true;
+				//create a new wall
+				if (isBuildingWall == false)
+				{
+					clickEvent = false;
+					sf::RectangleShape newBuilding;
+					newBuilding.setOrigin(0, wallThickness / 2);
+					newBuilding.setPosition(mousePos);
+					wall = newBuilding;
+					isBuildingWall = true;
+				}
+				//tilt and stretch the wall 
+				sf::Vector2f diff(mousePos - wall.getPosition());
+				wall.setSize(sf::Vector2f(sqrt(std::pow(diff.x, 2) + std::pow(diff.y, 2)), wallThickness));
+				float ang = atan(diff.y / diff.x) * 180 / PI;
+				if (mousePos.x < wall.getPosition().x)
+					ang -= 180;
+				wall.setRotation(ang);
 			}
-			//tilt and stretch the wall 
-			sf::Vector2f diff(mousePos - building.getPosition());
-			building.setSize(sf::Vector2f(sqrt(std::pow(diff.x, 2) + std::pow(diff.y, 2)), wallThickness));
-			float ang = atan(diff.y / diff.x) * 180 / PI;
-			if (mousePos.x < building.getPosition().x)
-				ang -= 180;
-			building.setRotation(ang);
+			//conferm wall and stop building
+			else if (isBuildingWall == true)
+			{
+				updateNeeded = true;
+				isBuildingWall = false;
+				walls.push_back(Block(wall, buildingType));
+				buildingType = ' ';
+			}
 		}
-		//conferm wall and stop building
-		else if (isBuilding == true)
+	}
+	//create new walls
+	if (buildingType == 's' || buildingType == 'f')
+	{
+		if (isBuildingWall == false)
 		{
-			updateNeeded = true;
-			isBuilding = false;
-			walls.push_back(Wall(building, buildingType));
-			buildingType = ' ';
+			//create-modify in-construction circle
+			if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
+			{
+				//create a new circle
+				if (isBuildingCircle == false)
+				{
+					clickEvent = false;
+					sf::CircleShape newBuilding;
+					newBuilding.setPosition(mousePos);
+					circle = newBuilding;
+					isBuildingCircle = true;
+				}
+				//tilt and stretch the circle 
+				sf::Vector2f diff(mousePos - circle.getPosition());
+				circle.setRadius(sqrt(std::pow(diff.x, 2) + std::pow(diff.y, 2)));
+				circle.setOrigin(circle.getRadius(), circle.getRadius());
+			}
+			//conferm circle and stop building
+			else if (isBuildingCircle == true)
+			{
+				updateNeeded = true;
+				isBuildingCircle = false;
+				//walls.push_back(Block(wall, buildingType));
+				buildingType = ' ';
+			}
 		}
 	}
 	//create new lasers
@@ -161,8 +206,11 @@ void Simulation::draw()
 	for (auto wall : walls)
 		wall.draw(window);
 
-	if (isBuilding)
-		window.draw(building);
+	if (isBuildingWall)
+		window.draw(wall);
+
+	if (isBuildingCircle)
+		window.draw(circle);
 
 	for (auto laser : lasers)
 		laser.draw(window);

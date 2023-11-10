@@ -50,7 +50,7 @@ bool Laser::move(bool clicked, sf::Vector2f pos, sf::Vector2f lastPos)
 	return needUpdate;
 }
 
-void Laser::updateLaser(std::vector<Wall> walls)
+void Laser::updateLaser(std::vector<Block> walls)
 {
 	auto formatAng = [](float ang) {
 		while (ang < 0)
@@ -102,7 +102,7 @@ sf::FloatRect Laser::hitbox()
 	return body.getGlobalBounds();
 }
 
-std::pair<sf::Vector2f, int> Laser::findCollision(std::vector<Wall> walls, sf::Vector2f start, float ang, int exclude)
+std::pair<sf::Vector2f, int> Laser::findCollision(std::vector<Block> walls, sf::Vector2f start, float ang, int exclude)
 {
 	auto intersection = [](float m1, float q1, float m2, float q2) {
 		float x = (q2 - q1) / (m1 - m2);
@@ -117,7 +117,7 @@ std::pair<sf::Vector2f, int> Laser::findCollision(std::vector<Wall> walls, sf::V
 		float maxY = std::max(p1.y, p2.y);
 
 		//check the point is within the bounding box of the segment
-		if (p.x >= minX && p.x <= maxX && p.y >= minY && p.y <= maxY)
+		if ((p.x >= minX && p.x <= maxX) || (p.y >= minY && p.y <= maxY))
 			return true;
 
 		return false;
@@ -155,12 +155,16 @@ std::pair<sf::Vector2f, int> Laser::findCollision(std::vector<Wall> walls, sf::V
 					collided = true;
 					if (walls[i].reflects())
 						nWall = i;
+					else
+						nWall = -1;
 				}
 				else if (dist(start, inter) < dist(start, closest))
 				{
 					closest = inter;
 					if (walls[i].reflects())
 						nWall = i;
+					else
+						nWall = -1;
 				}
 			}
 		}
@@ -181,7 +185,7 @@ std::pair<sf::Vector2f, int> Laser::findCollision(std::vector<Wall> walls, sf::V
 	return std::make_pair(closest, nWall);
 }
 
-float Laser::findNewAngle(float angBefore, Wall wall)
+float Laser::findNewAngle(float angBefore, Block wall)
 {
 	float wallAng = atan(wall.m) * 180 / PI;
 	if (wallAng < 0)

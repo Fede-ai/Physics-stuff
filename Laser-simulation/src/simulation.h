@@ -1,5 +1,5 @@
 #include <SFML/Graphics.hpp>
-#include "wall.h"
+#include "block.h"
 #include "laser.h"
 
 class Simulation
@@ -18,15 +18,17 @@ private:
 	sf::Vector2f lastMousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 	
 	sf::VertexArray background;
-	sf::RectangleShape building;
+	sf::RectangleShape wall;
+	sf::CircleShape circle;
 
 	char buildingType = ' ';
-	bool isBuilding = false;
+	bool isBuildingWall = false;
+	bool isBuildingCircle = false;
 	bool canSelectBuilding = false;
 	float wallThickness = 4;
 	bool clickEvent = false;
 	bool updateNeeded = true;
 
-	std::vector<Wall> walls;
+	std::vector<Block> walls;
 	std::vector<Laser> lasers;
 };

@@ -1,10 +1,10 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 
-class Wall
+class Block
 {
 public:
-	Wall(sf::RectangleShape rect, char inType);
+	Block(sf::RectangleShape rect, char inType);
 	void draw(sf::RenderWindow& window);
 	bool reflects();	
 	float m, q;

@@ -1,7 +1,7 @@
-#include "wall.h"
+#include "block.h"
 constexpr auto PI = 3.14159265358979323846;
 
-Wall::Wall(sf::RectangleShape rect, char inType)
+Block::Block(sf::RectangleShape rect, char inType)
 {
 	body = rect;
 
@@ -28,13 +28,13 @@ Wall::Wall(sf::RectangleShape rect, char inType)
 	line[1].position = p2;
 }
 
-void Wall::draw(sf::RenderWindow& window)
+void Block::draw(sf::RenderWindow& window)
 {
 	window.draw(body);
 	//window.draw(line);
 }
 
-bool Wall::reflects()
+bool Block::reflects()
 {
 	return isReflective;
 }
