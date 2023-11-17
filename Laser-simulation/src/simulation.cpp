@@ -41,7 +41,9 @@ int Simulation::run()
 				break;
 			case sf::Event::MouseButtonPressed:
 				if (event.mouseButton.button == sf::Mouse::Left)
-					clickEvent = true;
+					leftEvent = true;
+				else if (event.mouseButton.button == sf::Mouse::Right)
+					rightEvent = true;
 			}
 		}
 
@@ -104,7 +106,7 @@ void Simulation::move()
 				//create a new wall
 				if (isBuildingWall == false)
 				{
-					clickEvent = false;
+					leftEvent = false;
 					sf::RectangleShape newBuilding;
 					newBuilding.setOrigin(0, wallThickness / 2);
 					newBuilding.setPosition(mousePos);
@@ -117,8 +119,6 @@ void Simulation::move()
 				float ang = atan(diff.y / diff.x) * 180 / PI;
 				if (mousePos.x < wall.getPosition().x)
 					ang -= 180;
-				if (int(round(ang)) % 90 == 0)
-					ang += 1;
 				wall.setRotation(ang);
 			}
 			//conferm wall and stop building
@@ -131,7 +131,7 @@ void Simulation::move()
 			}
 		}
 	}
-	//create new blocks
+	//create new circles
 	if (buildingType == 's' || buildingType == 'f')
 	{
 		if (isBuildingWall == false)
@@ -142,7 +142,7 @@ void Simulation::move()
 				//create a new circle
 				if (isBuildingCircle == false)
 				{
-					clickEvent = false;
+					leftEvent = false;
 					sf::CircleShape newBuilding;
 					newBuilding.setPosition(mousePos);
 					circle = newBuilding;
@@ -169,23 +169,58 @@ void Simulation::move()
 		if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
 		{
 			updateNeeded = true;
-			clickEvent = false;
+			leftEvent = false;
 			lasers.push_back(Laser(mousePos));
 			buildingType = ' ';
 		}
 	}
 
+	//move/rotate objects
 	for (auto& laser : lasers)
 	{
-		if (laser.hitbox().contains(mousePos) && clickEvent)
+		if (laser.hitbox().contains(mousePos))
 		{
-			if (laser.move(true, mousePos, lastMousePos))
+			if (laser.move(leftEvent, rightEvent, mousePos, lastMousePos))
 				updateNeeded = true;
-			clickEvent = false;
+
+			leftEvent = false;
+			rightEvent = false;
 		}
-		else 
+		else
 		{
-			if (laser.move(false, mousePos, lastMousePos))
+			if (laser.move(false, false, mousePos, lastMousePos))
+				updateNeeded = true;
+		}
+	}
+	for (auto& circle : circles)
+	{
+		if (circle.hitbox().contains(mousePos))
+		{
+			if (circle.move(leftEvent, rightEvent, mousePos, lastMousePos))
+				updateNeeded = true;
+
+			leftEvent = false;
+			rightEvent = false;
+		}
+		else
+		{
+			if (circle.move(false, false, mousePos, lastMousePos))
+				updateNeeded = true;
+		}
+	}
+	for (auto& block : blocks)
+	{
+		if (block.hitbox().contains(mousePos))
+		{
+			if (block.move(leftEvent, rightEvent, mousePos, lastMousePos))
+				updateNeeded = true;
+
+			leftEvent = false;
+			rightEvent = false;
+		}
+		else
+		{
+			if (block.move(false, false, mousePos, lastMousePos))
 				updateNeeded = true;
 		}
 	}
@@ -197,7 +232,7 @@ void Simulation::move()
 		updateNeeded = false;
 	}
 
-	clickEvent = false;
+	leftEvent = false;
 	lastMousePos = mousePos;
 }
 
@@ -218,5 +253,7 @@ void Simulation::draw()
 		window.draw(circle);
 
 	for (auto laser : lasers)
-		laser.draw(window);
+		laser.drawLaser(window);
+	for (auto laser : lasers)
+		laser.drawBody(window);
 }

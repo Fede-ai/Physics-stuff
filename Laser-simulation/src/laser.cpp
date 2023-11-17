@@ -12,11 +12,11 @@ Laser::Laser(sf::Vector2f pos)
 	laser.setPrimitiveType(sf::LineStrip);
 }
 
-bool Laser::move(bool clicked, sf::Vector2f pos, sf::Vector2f lastPos)
+bool Laser::move(bool leftEvent, bool rightEvent, sf::Vector2f pos, sf::Vector2f lastPos)
 {
 	bool needUpdate = false;
 
-	if (clicked)
+	if (leftEvent)
 		isMoving = true;
 	else if (!sf::Mouse::isButtonPressed(sf::Mouse::Left) && isMoving)
 		isMoving = false;
@@ -27,7 +27,7 @@ bool Laser::move(bool clicked, sf::Vector2f pos, sf::Vector2f lastPos)
 		body.move(pos - lastPos);
 	}
 
-	if (sf::Mouse::isButtonPressed(sf::Mouse::Right) && !wasClickingRight && body.getGlobalBounds().contains(pos) && !isMoving)
+	if (rightEvent)
 		isRotating = true;
 	else if (!sf::Mouse::isButtonPressed(sf::Mouse::Right) && isRotating)
 		isRotating = false;
@@ -46,7 +46,6 @@ bool Laser::move(bool clicked, sf::Vector2f pos, sf::Vector2f lastPos)
 		body.setRotation(ang);
 	}
 
-	wasClickingRight = sf::Mouse::isButtonPressed(sf::Mouse::Right);
 	return needUpdate;
 }
 
@@ -91,10 +90,14 @@ void Laser::updateLaser(std::vector<Block> blocks)
 	std::cout << "bounces: " << nBounces << "\n";
 }
 
-void Laser::draw(sf::RenderWindow& window)
+void Laser::drawBody(sf::RenderWindow& window)
+{
+	window.draw(body);
+}
+
+void Laser::drawLaser(sf::RenderWindow& window)
 {
 	window.draw(laser);
-	window.draw(body);
 }
 
 sf::FloatRect Laser::hitbox()

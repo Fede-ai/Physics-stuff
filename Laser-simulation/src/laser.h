@@ -7,9 +7,10 @@ class Laser
 {
 public:
 	Laser(sf::Vector2f pos);
-	bool move(bool clicked, sf::Vector2f pos, sf::Vector2f lastPos);
+	bool move(bool leftEvent, bool rightEvent, sf::Vector2f pos, sf::Vector2f lastPos);
 	void updateLaser(std::vector<Block> blocks);
-	void draw(sf::RenderWindow& window);
+	void drawBody(sf::RenderWindow& window);
+	void drawLaser(sf::RenderWindow& window);
 	sf::FloatRect hitbox();
 
 private:
@@ -17,7 +18,6 @@ private:
 	float findNewAngle(float angBefore, Block wall);
 
 	bool isMoving = false;
-	bool wasClickingRight = false;
 	bool isRotating = false;
 
 	sf::RectangleShape body;

@@ -27,7 +27,9 @@ private:
 	bool isBuildingCircle = false;
 	bool canSelectBuilding = false;
 	float wallThickness = 4;
-	bool clickEvent = false;
+
+	bool leftEvent = false;
+	bool rightEvent = false;
 	bool updateNeeded = true;
 
 	std::vector<Block> blocks;
