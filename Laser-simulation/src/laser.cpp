@@ -50,7 +50,7 @@ bool Laser::move(bool clicked, sf::Vector2f pos, sf::Vector2f lastPos)
 	return needUpdate;
 }
 
-void Laser::updateLaser(std::vector<Block> walls)
+void Laser::updateLaser(std::vector<Block> blocks)
 {
 	auto formatAng = [](float ang) {
 		while (ang < 0)
@@ -70,7 +70,7 @@ void Laser::updateLaser(std::vector<Block> walls)
 
 	while (true)
 	{
-		const auto info = findCollision(walls, laser[laser.getVertexCount()-1].position, ang, lastBounceWall);
+		const auto info = findCollision(blocks, laser[laser.getVertexCount()-1].position, ang, lastBounceWall);
 
 		laser.append(info.first);
 
@@ -79,7 +79,7 @@ void Laser::updateLaser(std::vector<Block> walls)
 			break;
 
 		nBounces++;
-		ang = formatAng(findNewAngle(ang, walls[info.second]));
+		ang = formatAng(findNewAngle(ang, blocks[info.second]));
 
 		if (nBounces >= 200'000)
 		{
@@ -102,7 +102,7 @@ sf::FloatRect Laser::hitbox()
 	return body.getGlobalBounds();
 }
 
-std::pair<sf::Vector2f, int> Laser::findCollision(std::vector<Block> walls, sf::Vector2f start, float ang, int exclude)
+std::pair<sf::Vector2f, int> Laser::findCollision(std::vector<Block> blocks, sf::Vector2f start, float ang, int exclude)
 {
 	auto intersection = [](float m1, float q1, float m2, float q2) {
 		float x = (q2 - q1) / (m1 - m2);
@@ -137,23 +137,23 @@ std::pair<sf::Vector2f, int> Laser::findCollision(std::vector<Block> walls, sf::
 	float mLaser = tan(ang * PI / 180);
 	float qLaser = - mLaser * start.x + start.y;
 	
-	for (int i = 0; i < walls.size(); i++)
+	for (int i = 0; i < blocks.size(); i++)
 	{
 		if (i == exclude)
 			continue;
 
-		sf::Vector2f inter = intersection(mLaser, qLaser, walls[i].m, walls[i].q);
+		sf::Vector2f inter = intersection(mLaser, qLaser, blocks[i].m, blocks[i].q);
 		if (((ang < 90 || ang > 270) && inter.x > start.x) ||
 			(ang > 90 && ang < 270 && inter.x < start.x) ||
 			(ang == 270 && inter.y < start.y) || (ang == 90 && inter.y > start.y))
 		{
-			if (contains(walls[i].p1, walls[i].p2, inter))
+			if (contains(blocks[i].p1, blocks[i].p2, inter))
 			{
 				if (collided == false)
 				{
 					closest = inter;
 					collided = true;
-					if (walls[i].reflects())
+					if (blocks[i].reflects())
 						nWall = i;
 					else
 						nWall = -1;
@@ -161,7 +161,7 @@ std::pair<sf::Vector2f, int> Laser::findCollision(std::vector<Block> walls, sf::
 				else if (dist(start, inter) < dist(start, closest))
 				{
 					closest = inter;
-					if (walls[i].reflects())
+					if (blocks[i].reflects())
 						nWall = i;
 					else
 						nWall = -1;

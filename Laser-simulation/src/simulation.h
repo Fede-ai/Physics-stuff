@@ -1,6 +1,7 @@
 #include <SFML/Graphics.hpp>
 #include "block.h"
 #include "laser.h"
+#include "circle.h"
 
 class Simulation
 {
@@ -29,6 +30,7 @@ private:
 	bool clickEvent = false;
 	bool updateNeeded = true;
 
-	std::vector<Block> walls;
+	std::vector<Block> blocks;
+	std::vector<Circle> circles;
 	std::vector<Laser> lasers;
 };

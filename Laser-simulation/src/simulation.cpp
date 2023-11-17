@@ -93,7 +93,7 @@ void Simulation::move()
 		canSelectBuilding = true;
 	}
 
-	//create new walls
+	//create new blocks
 	if (buildingType == 'r' || buildingType == 'n')
 	{		
 		if (isBuildingCircle == false)
@@ -117,6 +117,8 @@ void Simulation::move()
 				float ang = atan(diff.y / diff.x) * 180 / PI;
 				if (mousePos.x < wall.getPosition().x)
 					ang -= 180;
+				if (int(round(ang)) % 90 == 0)
+					ang += 1;
 				wall.setRotation(ang);
 			}
 			//conferm wall and stop building
@@ -124,12 +126,12 @@ void Simulation::move()
 			{
 				updateNeeded = true;
 				isBuildingWall = false;
-				walls.push_back(Block(wall, buildingType));
+				blocks.push_back(Block(wall, buildingType));
 				buildingType = ' ';
 			}
 		}
 	}
-	//create new walls
+	//create new blocks
 	if (buildingType == 's' || buildingType == 'f')
 	{
 		if (isBuildingWall == false)
@@ -156,7 +158,7 @@ void Simulation::move()
 			{
 				updateNeeded = true;
 				isBuildingCircle = false;
-				//walls.push_back(Block(wall, buildingType));
+				circles.push_back(Circle(circle, buildingType));
 				buildingType = ' ';
 			}
 		}
@@ -191,7 +193,7 @@ void Simulation::move()
 	if (updateNeeded)
 	{
 		for (auto& laser : lasers)
-			laser.updateLaser(walls);
+			laser.updateLaser(blocks);
 		updateNeeded = false;
 	}
 
@@ -203,8 +205,11 @@ void Simulation::draw()
 {
 	window.draw(background);
 
-	for (auto wall : walls)
+	for (auto wall : blocks)
 		wall.draw(window);
+
+	for (auto circle : circles)
+		circle.draw(window);
 
 	if (isBuildingWall)
 		window.draw(wall);
