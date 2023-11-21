@@ -26,7 +26,7 @@ private:
 	bool isBuildingWall = false;
 	bool isBuildingCircle = false;
 	bool canSelectBuilding = false;
-	float wallThickness = 4;
+	double wallThickness = 4;
 
 	bool leftEvent = false;
 	bool rightEvent = false;

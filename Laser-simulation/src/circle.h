@@ -9,7 +9,7 @@ public:
 	bool move(bool leftEvent, bool rightEvent, sf::Vector2f pos, sf::Vector2f lastPos);
 	bool reflects();
 	sf::FloatRect hitbox();
-	float x, y, r;
+	double x, y, r;
 
 private:
 	sf::CircleShape body;

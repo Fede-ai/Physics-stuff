@@ -15,8 +15,9 @@ public:
 	sf::FloatRect hitbox();
 
 private:
-	std::pair<sf::Vector2f, int> findCollision(std::vector<Block> blocks, sf::Vector2f start, float ang, int exclude);
-	float findNewAngle(float angBefore, Block wall);
+	std::pair<sf::Vector2f, int> findCollision(std::vector<Block> blocks, std::vector<Circle> circles, sf::Vector2f start, double ang, int exclude);
+	double findNewAngle(double angBefore, Block wall);
+	double findNewAngle(double angBefore, Circle circle, sf::Vector2f i);
 
 	bool isMoving = false;
 	bool isRotating = false;

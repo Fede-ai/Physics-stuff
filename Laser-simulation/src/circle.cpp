@@ -16,9 +16,9 @@ Circle::Circle(sf::CircleShape circle, char inType)
 		isReflective = false;
 	}
 
-	x = circle.getPosition().x;
-	y = circle.getPosition().y;
-	r = circle.getRadius();
+	x = body.getPosition().x;
+	y = body.getPosition().y;
+	r = body.getRadius();
 }
 
 void Circle::draw(sf::RenderWindow& window)
@@ -56,13 +56,9 @@ bool Circle::move(bool leftEvent, bool rightEvent, sf::Vector2f pos, sf::Vector2
 
 	if (needUpdate)
 	{
-		//p1 = body.getPosition();
-		//p2 = body.getPosition();
-		//p2.x += cos(body.getRotation() * PI / 180) * body.getSize().x;
-		//p2.y += sin(body.getRotation() * PI / 180) * body.getSize().x;
-		//
-		//m = (p2.y - p1.y) / (p2.x - p1.x);
-		//q = p1.y - m * p1.x;
+		x = body.getPosition().x;
+		y = body.getPosition().y;
+		r = body.getRadius();
 	}
 
 	return needUpdate;

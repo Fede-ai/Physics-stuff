@@ -9,7 +9,7 @@ public:
 	void draw(sf::RenderWindow& window);
 	sf::FloatRect hitbox();
 	bool reflects();	
-	float m, q;
+	double m, q;
 	sf::Vector2f p1, p2;
 
 private:

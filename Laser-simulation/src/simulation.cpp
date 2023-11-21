@@ -15,7 +15,7 @@ Simulation::Simulation()
 	int radius = 775;
 	for (int i = 0; i < n; i++)
 	{
-		float ang = 2 * PI * (float(i) / (n - 1));
+		double ang = 2 * PI * (double(i) / (n - 1));
 		sf::Vector2f pos(cos(ang) * radius * 16 / 9, sin(ang) * radius);
 		background[i + 1].position = pos + sf::Vector2f(1920 / 2, 1080 / 2);
 		background[i + 1].color = sf::Color(0, 50, 130);
@@ -116,7 +116,7 @@ void Simulation::move()
 				//tilt and stretch the wall 
 				sf::Vector2f diff(mousePos - wall.getPosition());
 				wall.setSize(sf::Vector2f(sqrt(std::pow(diff.x, 2) + std::pow(diff.y, 2)), wallThickness));
-				float ang = atan(diff.y / diff.x) * 180 / PI;
+				double ang = atan(diff.y / diff.x) * 180 / PI;
 				if (mousePos.x < wall.getPosition().x)
 					ang -= 180;
 				wall.setRotation(ang);

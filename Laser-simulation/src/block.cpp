@@ -3,10 +3,6 @@ constexpr auto PI = 3.14159265358979323846;
 
 Block::Block(sf::RectangleShape rect, char inType)
 {
-	if (rect.getRotation() == 0 || rect.getRotation() == 90 ||
-		rect.getRotation() == 180 || rect.getRotation() == 270)
-		rect.rotate(0.05);
-
 	body = rect;
 
 	if (inType == 'r')
@@ -53,7 +49,7 @@ bool Block::move(bool leftEvent, bool rightEvent, sf::Vector2f pos, sf::Vector2f
 	{
 		needUpdate = true;
 		sf::Vector2f diff = pos - body.getPosition();
-		float ang = atan(diff.y / diff.x) * 180 / PI;
+		double ang = atan(diff.y / diff.x) * 180 / PI;
 		if (pos.x < body.getPosition().x)
 			ang -= 180;
 
@@ -62,10 +58,6 @@ bool Block::move(bool leftEvent, bool rightEvent, sf::Vector2f pos, sf::Vector2f
 
 		body.setRotation(ang);
 		body.setSize(sf::Vector2f(sqrt(std::pow(diff.x, 2) + std::pow(diff.y, 2)), body.getSize().y));
-
-		if (body.getRotation() == 0 || body.getRotation() == 90 ||
-			body.getRotation() == 180 || body.getRotation() == 270)
-			body.rotate(0.05);
 	}
 
 	if (needUpdate)
