@@ -2,13 +2,14 @@
 #include <SFML/Graphics.hpp>
 #include <stack>
 #include "block.h"
+#include "circle.h"
 
 class Laser
 {
 public:
 	Laser(sf::Vector2f pos);
 	bool move(bool leftEvent, bool rightEvent, sf::Vector2f pos, sf::Vector2f lastPos);
-	void updateLaser(std::vector<Block> blocks);
+	void updateLaser(std::vector<Block> blocks, std::vector<Circle> circles);
 	void drawBody(sf::RenderWindow& window);
 	void drawLaser(sf::RenderWindow& window);
 	sf::FloatRect hitbox();

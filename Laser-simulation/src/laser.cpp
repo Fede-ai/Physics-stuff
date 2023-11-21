@@ -49,7 +49,7 @@ bool Laser::move(bool leftEvent, bool rightEvent, sf::Vector2f pos, sf::Vector2f
 	return needUpdate;
 }
 
-void Laser::updateLaser(std::vector<Block> blocks)
+void Laser::updateLaser(std::vector<Block> blocks, std::vector<Circle> circles)
 {
 	auto formatAng = [](float ang) {
 		while (ang < 0)
@@ -67,7 +67,12 @@ void Laser::updateLaser(std::vector<Block> blocks)
 	float ang = body.getRotation();
 	int lastBounceWall = -1;
 
-	while (true)
+	for (auto circle : circles)
+	{
+
+	}
+
+	/*while (true)
 	{
 		const auto info = findCollision(blocks, laser[laser.getVertexCount()-1].position, ang, lastBounceWall);
 
@@ -80,14 +85,17 @@ void Laser::updateLaser(std::vector<Block> blocks)
 		nBounces++;
 		ang = formatAng(findNewAngle(ang, blocks[info.second]));
 
-		if (nBounces >= 200'000)
+		if (nBounces >= 100'000)
 		{
 			nBounces = -1;
 			break;
 		}
 	}
 
-	std::cout << "bounces: " << nBounces << "\n";
+	if (nBounces == -1)
+		std::cout << "bounces > 100'000\n";
+	else
+		std::cout << "bounces = " << nBounces << "\n";*/
 }
 
 void Laser::drawBody(sf::RenderWindow& window)

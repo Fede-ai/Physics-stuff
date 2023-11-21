@@ -228,7 +228,7 @@ void Simulation::move()
 	if (updateNeeded)
 	{
 		for (auto& laser : lasers)
-			laser.updateLaser(blocks);
+			laser.updateLaser(blocks, circles);
 		updateNeeded = false;
 	}
 

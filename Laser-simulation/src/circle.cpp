@@ -1,4 +1,5 @@
 #include "circle.h"
+#include <iostream>
 
 Circle::Circle(sf::CircleShape circle, char inType)
 {
@@ -14,6 +15,10 @@ Circle::Circle(sf::CircleShape circle, char inType)
 		body.setFillColor(sf::Color::Red);
 		isReflective = false;
 	}
+
+	x = circle.getPosition().x;
+	y = circle.getPosition().y;
+	r = circle.getRadius();
 }
 
 void Circle::draw(sf::RenderWindow& window)
