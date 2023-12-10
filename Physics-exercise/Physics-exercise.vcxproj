@@ -136,6 +136,15 @@
   <ItemGroup>
     <ClInclude Include="src\exercise.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="testo.docx" />
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="font.ttf" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="spring.png" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
