@@ -16,9 +16,12 @@ private:
 
 	sf::VertexArray body;
 	sf::Vector2f pos = sf::Vector2f(540, 540);
-	sf::Vector2f vel = sf::Vector2f(0, 1);
-	float area = 100'000;
-	float squeezed = 2;
+	sf::Vector2f vel = sf::Vector2f(-1, 1);
+	float area = 10'000;
+	float squeezed = 1;
 	const int sidesBall = 40;
+	const float squeezMomentum = 0.7;
+	const float squeezCoef = 20;
+	float ang = 0;
 };
 

@@ -38,10 +38,23 @@ int Ball::run()
 
 void Ball::update()
 {
+	w.setMouseCursorVisible(false);
+
+	auto newPos = w.mapPixelToCoords(sf::Mouse::getPosition(w));
+	auto travelled = newPos - pos;
+	pos = newPos;
+
+	float squeez = sqrt(std::pow(travelled.x, 2) + std::pow(travelled.y, 2)) / squeezCoef + 1;
+	squeezed = squeezMomentum * squeezed + (1 - squeezMomentum) * squeez;
+
+	if (travelled.x == 0 && travelled.y == 0) {}
+	else if (travelled.x == 0)
+		ang = PI / 2;
+	else
+		ang = atan(travelled.y / travelled.x);
+
 	float length = sqrt(area / PI * squeezed);
 	float height = sqrt(area / PI / squeezed);
-	float ang = atan(vel.y / vel.x);
-
 	body.clear();
 	body.append(sf::Vertex(pos, sf::Color::Black));
 	for (int i = 0; i < sidesBall + 2; i++) {
