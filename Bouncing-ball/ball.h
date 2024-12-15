@@ -8,7 +8,7 @@ class Ball
 public:
 	Ball();
 	int run();
-	void update();
+	void moveGraph();
 	void draw();
 
 private:

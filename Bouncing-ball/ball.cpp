@@ -27,7 +27,7 @@ int Ball::run()
 
 		w.clear(sf::Color(130, 130, 130));
 
-		update();
+		moveGraph();
 		draw();
 
 		w.display();
@@ -36,7 +36,7 @@ int Ball::run()
 	return 0;
 }
 
-void Ball::update()
+void Ball::moveGraph()
 {
 	w.setMouseCursorVisible(false);
 

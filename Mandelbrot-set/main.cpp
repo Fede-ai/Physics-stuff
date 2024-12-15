@@ -45,7 +45,7 @@ bool isFinite(const double r, const double i) {
 		double tempI = 2 * newR * newI + i;
 		newR = tempR, newI = tempI;
 
-		for (auto f : found) {
+		for (const auto& f : found) {
 			if (f.first == newR && f.second == newI)
 				return true;
 		}
