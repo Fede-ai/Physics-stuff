@@ -13,30 +13,117 @@ Pendulum::Pendulum()
 
 void Pendulum::update()
 {
-	double dt = 0.00001;
+	double dt = 0.00002 / 1.5;
 
 	for (int i = 0; i < 1000; i++) {
 		double ang = pendulum.x * pi;
 		pendulum.x += pendulum.y * dt;
-		pendulum.y -= dt * (pendulum.y * drag + 9.806 * sin(ang) / length);
+		pendulum.y -= dt * (pendulum.y * drag / 1000.f + 9.806 * sin(ang) / length);
 	}
 
 	trail.push_back(pendulum);
+}
+sf::Image Pendulum::renderGraph(int width, int height)
+{
+	if (hasMoved) {
+		lastImg = renderAxes(width, height);
+		hasMoved = false;
+	}
+	sf::Image img = lastImg;
+
+	//draw a pixel on the image
+	auto draw = [this, &img](int x, int y, sf::Color c) {
+		int xPos = int(x - anchor.x * zoom + img.getSize().x / 2.f);
+		int yPos = int(y - anchor.y * zoom + img.getSize().y / 2.f);
+		if (xPos >= 0 && xPos < int(img.getSize().x) &&
+			yPos >= 0 && yPos < int(img.getSize().y))
+			img.setPixel(xPos, yPos, c);
+		};
+
+	//draw the trail
+	if (trail.size() > 1) {
+		for (int i = 0; i < trail.size() - 1; i++) {
+			double x1 = trail[i].x * unit.x * zoom, x2 = trail[i + 1].x * unit.x * zoom;
+			double y1 = -trail[i].y * unit.y * zoom, y2 = -trail[i + 1].y * unit.y * zoom;
+
+			//dont render if both points are outside
+			int x1p = int(x1 - anchor.x * zoom), y1p = int(y1 - anchor.y * zoom);
+			int x2p = int(x2 - anchor.x * zoom), y2p = int(y2 - anchor.y * zoom);
+			if (!(abs(x1p) < width / 2.f && abs(y1p) < height / 2.f) && 
+				!(abs(x2p) < width / 2.f && abs(y2p) < height / 2.f))
+				continue;
+
+			if (abs(y2 - y1) > abs(x2 - x1)) {
+				for (int y = 0; y < abs(y2 - y1); y++) {
+					double a = y / abs(y2 - y1) * (y2 - y1);
+					double b = a / (y2 - y1) * (x2 - x1);
+
+					draw(int(std::round(x1 + b)), int(std::round(y1 + a)), sf::Color::White);
+				}
+			}
+			else {
+				for (int x = 0; x < abs(x2 - x1); x++) {
+					double a = x / abs(x2 - x1) * (x2 - x1);
+					double b = a / (x2 - x1) * (y2 - y1);
+
+					draw(int(std::round(x1 + a)), int(std::round(y1 + b)), sf::Color::White);
+				}
+			}
+		}
+	}
+
+	//draw the ball
+	int radius = 8;
+	int xPen = int(std::round(pendulum.x * unit.x * zoom));
+	int yPen = -int(std::round(pendulum.y * unit.y * zoom));
+	for (int x = -radius; x < radius + 1; x++) {
+		for (int y = -radius; y < radius + 1; y++) {
+			if (sqrt(x * x + y * y) < radius)
+				draw(xPen + x, yPen + y, sf::Color(200, 10, 10));
+		}
+	}
+
+	return img;
 }
 
 void Pendulum::moveGraph()
 {
 	sf::Vector2i mousePos = sf::Mouse::getPosition();
 
-	if (sf::Mouse::isButtonPressed(sf::Mouse::Left) && isMovingGraph) {
+	if (sf::Mouse::isButtonPressed(sf::Mouse::Left) && 
+		isMovingGraph && mousePos != lastMousePos) {
 		anchor.x += (lastMousePos.x - mousePos.x) / zoom;
 		anchor.y += (lastMousePos.y - mousePos.y) / zoom;
+		hasMoved = true;
 	}
 
 	lastMousePos = mousePos;
 }
+void Pendulum::applyZoom(float delta)
+{
+	zoom /= (1.f - delta / 10.f);
+	zoom = std::max(zoom, 0.4f);
+	
+	hasMoved = true;
+}
 
-sf::Image Pendulum::renderGraph(int width, int height)
+void Pendulum::setPendulum(int x, int y, int width, int height)
+{
+	int left = int(anchor.x * zoom - width / 2.f);
+	int top = int(anchor.y * zoom - height / 2.f);
+
+	pendulum.x = float(x + left) / (unit.x * zoom);
+	pendulum.y = -float(y + top) / (unit.y * zoom);
+
+	trail.clear();
+	trail.push_back(pendulum);
+}
+void Pendulum::forceRerender()
+{
+	hasMoved = true;
+}
+
+sf::Image Pendulum::renderAxes(int width, int height) const
 {
 	sf::Image img;
 	img.create(width, height, sf::Color(50, 50, 50));
@@ -45,12 +132,13 @@ sf::Image Pendulum::renderGraph(int width, int height)
 	int top = int(anchor.y * zoom - height / 2.f);
 
 	//draw a pixel on the image
-	auto draw = [this, &img, width, height](int x, int y, sf::Color c) {
+	auto draw = [this, &img](int x, int y, sf::Color c) {
 		int xPos = int(x - anchor.x * zoom + img.getSize().x / 2.f);
 		int yPos = int(y - anchor.y * zoom + img.getSize().y / 2.f);
-		if (xPos >= 0 && xPos < width && yPos >= 0 && yPos < height)
+		if (xPos >= 0 && xPos < int(img.getSize().x) && 
+			yPos >= 0 && yPos < int(img.getSize().y))
 			img.setPixel(xPos, yPos, c);
-	};
+		};
 
 	//draw vertical axes
 	for (int y = top; y < top + height; y++) {
@@ -75,79 +163,103 @@ sf::Image Pendulum::renderGraph(int width, int height)
 		draw(x, 1, sf::Color::Black);
 	}
 
-	//draw the trail
-	if (trail.size() > 1) {
-		for (int i = 0; i < trail.size() - 1; i++) {
-			double x1 = trail[i].x * unit.x * zoom, x2 = trail[i + 1].x * unit.x * zoom;
-			double y1 = -trail[i].y * unit.y * zoom, y2 = -trail[i + 1].y * unit.y * zoom;
-
-			//swap point 1 and 2
-			if (y1 > y2) {
-				std::swap(y1, y2);
-				std::swap(x1, x2);
-			}
-
-			for (int y = 0; y < y2 - y1; y++) {
-				float per = y / (y2 - y1);
-				float x = x2 * per + x1 * (1 - per);
-
-
-				draw(int(std::round(x)), int(y1 + y), sf::Color::White);
-			}
-		}
-	}
-
 	//draw all the vector arrows
 	float yDiff = unit.y * zoom / 4.f;
 	for (float y = int(top / yDiff) * yDiff; y < top + height; y += yDiff) {
-		
+
 		float xDiff = unit.x * zoom / 8.f;
 		for (float x = int(left / xDiff) * xDiff; x < left + width; x += xDiff) {
-			
-			float xV = x / (unit.x * zoom) * Pendulum::pi;
+
+			float xV = float(x / (unit.x * zoom) * Pendulum::pi);
 			float xSize = -y / (unit.y * zoom);
-			float ySize = xSize * drag + 9.806 * sin(xV) / length;
+			float ySize = float(xSize * drag / 1000.f + 9.806 * sin(xV) / length);
+			xSize *= 0.9f, ySize *= 0.9f;
 
 			float size = sqrt(xSize * xSize + ySize * ySize);
 			float per = std::min(size / 15.f, 1.f);
-			auto c = sf::Color(255 * (1 - per), 255 * per, 0);
+			auto col = sf::Color(char(255 * (1 - per)), char(255 * per), 0);
 
-			for (int i = 0; i < 40; i++) {
-				float a = x + i / 40.f * xSize * zoom;
-				float b = y + i / 40.f * ySize * zoom;
-				draw(int(std::round(a)), int(std::round(b)), c);
+			//draw the body of the arrow
+			if (abs(xSize) > abs(ySize)) {
+				for (int i = 0; i < abs(xSize * zoom); i++) {
+					float a = i / abs(xSize) * xSize;
+					float b = a / xSize * ySize;
+					draw(int(std::round(x + a)), int(std::round(y + b)), col);
+				}
 			}
-		}
-	}
+			else {
+				for (int i = 0; i < abs(ySize * zoom); i++) {
+					float a = i / abs(ySize) * ySize;
+					float b = a / ySize * xSize;
+					draw(int(std::round(x + b)), int(std::round(y + a)), col);
+				}
+			}
 
-	//draw the ball
-	int radius = 8;
-	int xPen = int(std::round(pendulum.x * unit.x * zoom));
-	int yPen = -int(std::round(pendulum.y * unit.y * zoom));
-	for (int x = -radius; x < radius + 1; x++) {
-		for (int y = -radius; y < radius + 1; y++) {
-			if (sqrt(x * x + y * y) < radius)
-				draw(xPen + x, yPen + y, sf::Color(200, 10, 10));
+			//draw the base of the tip
+			float m = -xSize / ySize;
+			float dx = cos(atan(m)) * zoom * size / 5.f;
+			float dy = sin(atan(m)) * zoom * size / 5.f;
+			if (abs(dy) > abs(dx)) {
+				for (int i = 0; i < abs(dy); i++) {
+					double a = i / abs(dy) * (dy);
+					double b = a / (dy) * (dx);
+
+					draw(int(std::round(x + xSize * zoom + b)), int(std::round(y + ySize * zoom + a)), col);
+					draw(int(std::round(x + xSize * zoom - b)), int(std::round(y + ySize * zoom - a)), col);
+				}
+			}
+			else {
+				for (int i = 0; i < abs(dx); i++) {
+					double a = i / abs(dx) * (dx);
+					double b = a / (dx) * (dy);
+
+					draw(int(std::round(x + xSize * zoom + a)), int(std::round(y + ySize * zoom + b)), col);
+					draw(int(std::round(x + xSize * zoom - a)), int(std::round(y + ySize * zoom - b)), col);
+				}
+			}
+
+			//draw right side of the tip
+			float tx = 1.2f * xSize * zoom, ty = 1.2f * ySize * zoom;
+			float d2x = xSize * zoom + dx - tx;
+			float d2y = ySize * zoom + dy - ty;
+			if (abs(d2y) > abs(d2x)) {
+				for (int i = 0; i < abs(d2y); i++) {
+					double a = i / abs(d2y) * (d2y);
+					double b = a / (d2y) * (d2x);
+
+					draw(int(std::round(x + tx + b)), int(std::round(y + ty + a)), col);
+				}
+			}
+			else {
+				for (int i = 0; i < abs(d2x); i++) {
+					double a = i / abs(d2x) * (d2x);
+					double b = a / (d2x) * (d2y);
+
+					draw(int(std::round(x + tx + a)), int(std::round(y + ty + b)), col);
+				}
+			}
+
+			//draw left side of the tip
+			d2x = xSize * zoom - dx - tx;
+			d2y = ySize * zoom - dy - ty;
+			if (abs(d2y) > abs(d2x)) {
+				for (int i = 0; i < abs(d2y); i++) {
+					double a = i / abs(d2y) * (d2y);
+					double b = a / (d2y) * (d2x);
+
+					draw(int(std::round(x + tx + b)), int(std::round(y + ty + a)), col);
+				}
+			}
+			else {
+				for (int i = 0; i < abs(d2x); i++) {
+					double a = i / abs(d2x) * (d2x);
+					double b = a / (d2x) * (d2y);
+
+					draw(int(std::round(x + tx + a)), int(std::round(y + ty + b)), col);
+				}
+			}
 		}
 	}
 
 	return img;
-}
-
-void Pendulum::setPendulum(int x, int y, int width, int height)
-{
-	int left = int(anchor.x * zoom - width / 2.f);
-	int top = int(anchor.y * zoom - height / 2.f);
-
-	pendulum.x = float(x + left) / (unit.x * zoom);
-	pendulum.y = -float(y + top) / (unit.y * zoom);
-
-	trail.clear();
-	trail.push_back(pendulum);
-}
-
-void Pendulum::applyZoom(float delta)
-{
-	zoom /= (1.f - delta / 10.f);
-	zoom = std::max(zoom, 0.4f);
 }

@@ -31,9 +31,14 @@ int main() {
 	mass.setFillColor(sf::Color(200, 10, 10));
 
 	sf::VertexArray arrow(sf::TriangleFan, 9);
+	for (int i = 0; i < 9; i++)
+		arrow[i].color = sf::Color(150, 150, 150);
 
 	sf::Font font;
 	font.loadFromFile("./font.ttf");
+	sf::Text eq("", font, 25);
+	sf::Text titles("", font, 25);
+	titles.setPosition(15, 8);
 
 	while (w.isOpen()) {
 		sf::Event e;
@@ -45,6 +50,7 @@ int main() {
 			else if (e.type == sf::Event::Resized) {
 				wSize = sf::Vector2f(w.getSize());
 				w.setView(sf::View({ wSize.x / 2.f, wSize.y / 2.f }, { wSize.x, wSize.y }));
+				pendulum.forceRerender();
 			}
 			//toogle fullscreen
 			else if (e.type == sf::Event::KeyPressed) {
@@ -60,6 +66,8 @@ int main() {
 					w.setView(sf::View({ newSize.x / 2.f, newSize.y / 2.f }, { newSize.x, newSize.y }));
 					w.setKeyRepeatEnabled(false);
 					w.setFramerateLimit(50);
+
+					pendulum.forceRerender();
 				}
 			}
 			//start moving graph
@@ -77,6 +85,16 @@ int main() {
 				if (e.mouseButton.button == sf::Mouse::Left)
 					pendulum.isMovingGraph = false;
 			}
+		}
+
+		//modify drag
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
+			pendulum.drag += 5;
+			pendulum.forceRerender();
+		}
+		else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
+			pendulum.drag -= 5;
+			pendulum.forceRerender();
 		}
 
 		if (pendulum.isUpdating)
@@ -109,19 +127,17 @@ int main() {
 		w.draw(pivot);
 
 		mass.setPosition(pivot.getPosition());
-		mass.move(body.getSize().x * cos(ang * Pendulum::pi), 
-			body.getSize().x * sin(ang * Pendulum::pi));
+		mass.move(body.getSize().x * float(cos(ang * Pendulum::pi)), 
+			body.getSize().x * float(sin(ang * Pendulum::pi)));
 		w.draw(mass);
 
 		float arrowLeng = float(pendulum.pendulum.y * 50);
-		sf::Vector2f offset = sf::Vector2f(4 * cos(ang * Pendulum::pi), 4 * sin(ang * Pendulum::pi));
-		for (int i = 0; i < 9; i++)
-			arrow[i].color = sf::Color(150, 150, 150);
-
-		arrow[0].position = mass.getPosition() + sf::Vector2f(arrowLeng * cos((ang - 0.5f)
-			* Pendulum::pi), arrowLeng * sin((ang - 0.5f) * Pendulum::pi));
-		arrow[1].position = mass.getPosition() + sf::Vector2f(1.2f * arrowLeng * cos((ang - 0.5f) 
-			* Pendulum::pi), 1.2f * arrowLeng * sin((ang - 0.5f) * Pendulum::pi));
+		sf::Vector2f offset = sf::Vector2f(4 * float(cos(ang * Pendulum::pi)), 
+			4 * float(sin(ang * Pendulum::pi)));
+		arrow[0].position = mass.getPosition() + sf::Vector2f(arrowLeng * float(cos((ang - 0.5f)
+			* Pendulum::pi)), arrowLeng * float(sin((ang - 0.5f) * Pendulum::pi)));
+		arrow[1].position = mass.getPosition() + sf::Vector2f(1.2f * arrowLeng * float(cos((ang - 0.5f) 
+			* Pendulum::pi)), 1.2f * arrowLeng * float(sin((ang - 0.5f) * Pendulum::pi)));
 		arrow[2].position = arrow[0].position + (offset + offset);
 		arrow[3].position = arrow[0].position + offset;
 		arrow[4].position = mass.getPosition() + offset;
@@ -131,15 +147,16 @@ int main() {
 		arrow[8].position = arrow[1].position;
 		w.draw(arrow);
 
-		sf::Text text("", font, 25);
-		text.setPosition(15, 8);
-		text.setString("Ang = " + std::to_string(pendulum.pendulum.x * Pendulum::pi) + " rad\nAng vel = "
+		titles.setString("Ang = " + std::to_string(pendulum.pendulum.x * Pendulum::pi) + " rad\nAng vel = "
 			+ std::to_string(pendulum.pendulum.y) + " rad / sec");
-		w.draw(text);
+		w.draw(titles);
 
-		text.setPosition(15, float(w.getSize().y - 45));
-		text.setString("A''(t) = -u * A'(t) - (g / L) * sin(A(t))");
-		w.draw(text);
+		std::string uStr = std::to_string(pendulum.drag / 1000.f);
+		while (uStr[uStr.size() - 1] == '0')
+			uStr.resize(uStr.size() - 1);
+		eq.setString("u = " + uStr + "\nA''(t) = -u * A'(t) - (g / L) * sin(A(t))");
+		eq.setPosition(15, float(w.getSize().y - 75));
+		w.draw(eq);
 
 		w.display();
 	}
