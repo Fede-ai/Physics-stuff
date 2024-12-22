@@ -1,0 +1,10 @@
+body {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	height: 100vh;
+	margin: 0;
+}
+canvas {
+	background-color: rgb(20, 20, 20);
+}
