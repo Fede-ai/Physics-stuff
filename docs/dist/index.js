@@ -9,18 +9,19 @@ const ctx = (() => {
     else
         throw new Error("Failed to get 2d contex");
 })();
-let points = [[]];
+const lines = [];
+const ders = [];
+let currentLine = [];
 let center = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 let lastMousePos;
 let isMoving = false, isDrawing = false;
+let zoom = 1;
 drawAxes();
 //resize and redraw canvas
 window.addEventListener('resize', () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    drawAxes();
-    for (let i = 0; i < points.length - 1; i++)
-        drawLine(points[i]);
+    resetGraph();
 });
 //disable context menu (right click is used to move)
 window.addEventListener('contextmenu', (event) => {
@@ -29,13 +30,13 @@ window.addEventListener('contextmenu', (event) => {
 //start drawing or moving
 canvas.addEventListener('mousedown', (event) => {
     const x = event.clientX, y = event.clientY;
-    if (event.button == 0) {
+    //start drawing
+    if (event.button == 0 && !isMoving) {
+        const p = { x: (x - center.x) * zoom, y: (y - center.y) * zoom };
         isDrawing = true;
-        const p = { x: x - center.x, y: y - center.y };
-        if (points[points.length - 1].length > 0)
-            drawLine([points[points.length - 1][points[points.length - 1].length - 1], p]);
-        points[points.length - 1].push(p);
+        currentLine.push(p);
     }
+    //start moving
     else if (event.button == 2 && !isDrawing) {
         isMoving = true;
         lastMousePos = { x, y };
@@ -45,50 +46,109 @@ canvas.addEventListener('mousedown', (event) => {
 canvas.addEventListener('mouseup', (event) => {
     if (event.button == 0) {
         isDrawing = false;
-        if (points[points.length - 1].length > 0)
-            points.push([]);
+        finalizeLine(currentLine);
+        currentLine = [];
+        resetGraph();
     }
     else if (event.button == 2) {
         isMoving = false;
     }
 });
-//stop moving
-canvas.addEventListener('mouseleave', (_) => {
+//zoom
+canvas.addEventListener('wheel', (event) => {
+    event.preventDefault();
+    const startZoom = zoom;
+    zoom *= (1 + event.deltaY / 1000);
+    zoom = Math.min(Math.max(zoom, 0.2), 5);
+    const d = zoom / startZoom;
+    center.x = (center.x - window.innerWidth / 2) / d + window.innerWidth / 2;
+    center.y = (center.y - window.innerHeight / 2) / d + window.innerHeight / 2;
     isDrawing = false;
-    if (points[points.length - 1].length > 0)
-        points.push([]);
-    isMoving = false;
+    finalizeLine(currentLine);
+    currentLine = [];
+    resetGraph();
 });
-//move canvas is right click is down
+//stop moving and drawing
+canvas.addEventListener('mouseleave', (_) => {
+    isMoving = false;
+    isDrawing = false;
+    finalizeLine(currentLine);
+    currentLine = [];
+    resetGraph();
+});
+//move canvas if right click is down
 let lastMove = performance.now();
 let lastDraw = performance.now();
 canvas.addEventListener('mousemove', (event) => {
     const currentTime = performance.now();
     const x = event.clientX, y = event.clientY;
-    if (isMoving && currentTime - lastMove > 50) {
+    if (isMoving && currentTime - lastMove > 40) {
         center.x += x - lastMousePos.x;
         center.y += y - lastMousePos.y;
         lastMove = currentTime;
         lastMousePos = { x, y };
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawAxes();
-        for (let i = 0; i < points.length - 1; i++)
-            drawLine(points[i]);
+        resetGraph();
     }
-    if (isDrawing && currentTime - lastDraw > 30) {
-        const p = { x: x - center.x, y: y - center.y };
-        if (points[points.length - 1].length > 0)
-            drawLine([points[points.length - 1][points[points.length - 1].length - 1], p]);
-        points[points.length - 1].push(p);
+    if (isDrawing && currentTime - lastDraw > 15) {
+        const p = { x: (x - center.x) * zoom, y: (y - center.y) * zoom };
+        //draw segment to join the new point
+        if (currentLine.length > 0) {
+            ctx.beginPath();
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = 'rgb(40 40 240)';
+            ctx.moveTo(currentLine[currentLine.length - 1].x / zoom + center.x, currentLine[currentLine.length - 1].y / zoom + center.y);
+            ctx.lineTo(p.x / zoom + center.x, p.y / zoom + center.y);
+            ctx.stroke();
+        }
+        currentLine.push(p);
         lastDraw = currentTime;
     }
 });
+function finalizeLine(ps) {
+    if (ps.length < 10)
+        return;
+    const smooth = [];
+    //smoothen the line
+    for (let i = 0; i < ps.length; i++) {
+        let sumX = 0;
+        let sumY = 0;
+        let count = 0;
+        for (let j = -3; j <= 3; j++) {
+            const idx = i + j;
+            if (idx >= 0 && idx < ps.length) {
+                sumX += ps[idx].x;
+                sumY += ps[idx].y;
+                count++;
+            }
+        }
+        smooth.push({
+            x: sumX / count,
+            y: sumY / count
+        });
+    }
+    const der = [];
+    for (let i = 0; i < ps.length - 1; i++) {
+        let x = (smooth[i].x + smooth[i + 1].x) / 2;
+        let y = (smooth[i + 1].y - smooth[i].y) / (smooth[i + 1].x - smooth[i].x);
+        der.push({ x, y });
+    }
+    lines.push(smooth);
+    ders.push(der);
+}
+function resetGraph() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawAxes();
+    if (lines.length !== ders.length)
+        throw new Error("Lines and ders don't match");
+    for (let i = 0; i < lines.length; i++)
+        drawLine(lines[i], ders[i]);
+}
 function drawAxes() {
     ctx.beginPath();
     ctx.strokeStyle = 'rgb(100 100 100)';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 0.5;
     //draw vertical axes
-    const xDiff = 100;
+    const xDiff = 100 / zoom;
     let mid = center.x - Math.floor(center.x / xDiff) * xDiff;
     for (let x = 0; x < window.innerWidth; x += xDiff) {
         if (mid + x == center.x)
@@ -97,7 +157,7 @@ function drawAxes() {
         ctx.lineTo(mid + x, window.innerHeight);
     }
     //draw horizontal axes
-    const yDiff = 100;
+    const yDiff = 100 / zoom;
     mid = center.y - Math.floor(center.y / yDiff) * yDiff;
     for (let y = 0; y < window.innerHeight; y += yDiff) {
         if (mid + y == center.y)
@@ -115,12 +175,19 @@ function drawAxes() {
     ctx.lineTo(center.x, window.innerHeight);
     ctx.stroke();
 }
-function drawLine(ps) {
+function drawLine(l, d) {
+    ctx.lineWidth = 1.5;
+    const yDiff = 100 / zoom;
     ctx.beginPath();
     ctx.strokeStyle = 'rgb(40 240 40)';
-    ctx.moveTo(ps[0].x + center.x, ps[0].y + center.y);
-    for (let i = 1; i < ps.length; i++) {
-        ctx.lineTo(ps[i].x + center.x, ps[i].y + center.y);
-    }
+    ctx.moveTo(l[0].x / zoom + center.x, l[0].y / zoom + center.y);
+    for (let i = 1; i < l.length; i++)
+        ctx.lineTo(l[i].x / zoom + center.x, l[i].y / zoom + center.y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgb(240 40 40)';
+    ctx.moveTo(d[0].x / zoom + center.x, d[0].y * yDiff + center.y);
+    for (let i = 1; i < d.length - 1; i++)
+        ctx.lineTo(d[i].x / zoom + center.x, d[i].y * yDiff + center.y);
     ctx.stroke();
 }
