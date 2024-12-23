@@ -2,9 +2,36 @@ body {
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	height: 100vh;
+	height: 100%;
+	width: 100%;
 	margin: 0;
 }
+
 canvas {
 	background-color: rgb(20, 20, 20);
+}
+
+.button {
+	position: absolute;
+	left: 2vh;
+  top: 2vh;
+	font-size: 5vh;
+	border-radius: 2vh;
+	padding-bottom: 0.8vh;
+	padding-left: 0.8vh;
+	padding-right: 0.8vh;
+	user-select: none;
+	background-color: rgb(50, 50, 50);
+}
+.button:active {
+	background-color: rgb(35, 35, 35);
+}
+
+.cr {
+	position: absolute;
+	color: rgb(180, 180, 180);
+	font-family: Helvetica;
+	left: 2vh;
+  top: 95vh;
+	font-size: 3vh;
 }

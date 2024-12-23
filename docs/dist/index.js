@@ -1,4 +1,5 @@
 "use strict";
+var _a;
 const canvas = document.getElementById('graph');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -7,11 +8,15 @@ const ctx = (() => {
     if (possibleContext)
         return possibleContext;
     else
-        throw new Error("Failed to get 2d contex");
+        throw new Error('Failed to get 2d contex');
 })();
 const lines = [];
 const ders = [];
 let currentLine = [];
+const intervals = [];
+let rightBound = Infinity;
+let leftBound = -Infinity;
+let direction = '';
 let center = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 let lastMousePos;
 let isMoving = false, isDrawing = false;
@@ -27,12 +32,32 @@ window.addEventListener('resize', () => {
 window.addEventListener('contextmenu', (event) => {
     event.preventDefault();
 });
+(_a = document.getElementById('back')) === null || _a === void 0 ? void 0 : _a.addEventListener('mousedown', (_) => {
+    if (!isDrawing && !isMoving && lines.length > 0) {
+        lines.pop();
+        ders.pop();
+        intervals.pop();
+        resetGraph();
+    }
+});
 //start drawing or moving
 canvas.addEventListener('mousedown', (event) => {
     const x = event.clientX, y = event.clientY;
     //start drawing
-    if (event.button == 0 && !isMoving) {
+    if (event.button == 0 && !isMoving && !isDrawing) {
         const p = { x: (x - center.x) * zoom, y: (y - center.y) * zoom };
+        rightBound = Infinity;
+        leftBound = -Infinity;
+        direction = '';
+        //dont let functions overlap
+        for (let i = 0; i < intervals.length; i++) {
+            if (p.x > intervals[i].x && p.x < intervals[i].y)
+                return;
+            else if (p.x < intervals[i].x)
+                rightBound = Math.min(rightBound, intervals[i].x);
+            else if (p.x > intervals[i].y)
+                leftBound = Math.max(leftBound, intervals[i].y);
+        }
         isDrawing = true;
         currentLine.push(p);
     }
@@ -59,7 +84,7 @@ canvas.addEventListener('wheel', (event) => {
     event.preventDefault();
     const startZoom = zoom;
     zoom *= (1 + event.deltaY / 1000);
-    zoom = Math.min(Math.max(zoom, 0.2), 5);
+    zoom = Math.min(Math.max(zoom, 0.15), 3);
     const d = zoom / startZoom;
     center.x = (center.x - window.innerWidth / 2) / d + window.innerWidth / 2;
     center.y = (center.y - window.innerHeight / 2) / d + window.innerHeight / 2;
@@ -89,35 +114,54 @@ canvas.addEventListener('mousemove', (event) => {
         lastMousePos = { x, y };
         resetGraph();
     }
-    if (isDrawing && currentTime - lastDraw > 15) {
+    if (isDrawing && currentTime - lastDraw > 10) {
         const p = { x: (x - center.x) * zoom, y: (y - center.y) * zoom };
-        //draw segment to join the new point
-        if (currentLine.length > 0) {
-            ctx.beginPath();
-            ctx.lineWidth = 1.5;
-            ctx.strokeStyle = 'rgb(40 40 240)';
-            ctx.moveTo(currentLine[currentLine.length - 1].x / zoom + center.x, currentLine[currentLine.length - 1].y / zoom + center.y);
-            ctx.lineTo(p.x / zoom + center.x, p.y / zoom + center.y);
-            ctx.stroke();
+        const n = currentLine.length;
+        //stop drawing not to everlap other functions
+        if (p.x > rightBound || p.x < leftBound ||
+            (direction == 'r' && p.x < currentLine[n - 1].x) ||
+            (direction == 'l' && p.x > currentLine[n - 1].x)) {
+            isDrawing = false;
+            finalizeLine(currentLine);
+            currentLine = [];
+            resetGraph();
+            return;
         }
-        currentLine.push(p);
+        //draw segment to join the new point
+        ctx.beginPath();
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = 'rgb(40 40 240)';
+        ctx.moveTo(currentLine[n - 1].x / zoom + center.x, currentLine[n - 1].y / zoom + center.y);
+        ctx.lineTo(p.x / zoom + center.x, p.y / zoom + center.y);
+        ctx.stroke();
+        //prevent multiple points with same x
+        if (n > 1 && currentLine[n - 2].x === currentLine[n - 1].x)
+            currentLine[n - 1] = p;
+        else
+            currentLine.push(p);
+        if (direction == '' && p.x > currentLine[n - 1].x)
+            direction = 'r';
+        else if (direction == '' && p.x < currentLine[n - 1].x)
+            direction = 'l';
         lastDraw = currentTime;
     }
 });
-function finalizeLine(ps) {
-    if (ps.length < 10)
+function finalizeLine(p) {
+    if (p.length < 10)
         return;
-    const smooth = [];
+    while (p[p.length - 1].x === p[p.length - 2].x)
+        p.pop();
     //smoothen the line
-    for (let i = 0; i < ps.length; i++) {
+    const smooth = [];
+    for (let i = 0; i < p.length; i++) {
         let sumX = 0;
         let sumY = 0;
         let count = 0;
         for (let j = -3; j <= 3; j++) {
             const idx = i + j;
-            if (idx >= 0 && idx < ps.length) {
-                sumX += ps[idx].x;
-                sumY += ps[idx].y;
+            if (idx >= 0 && idx < p.length) {
+                sumX += p[idx].x;
+                sumY += p[idx].y;
                 count++;
             }
         }
@@ -126,13 +170,16 @@ function finalizeLine(ps) {
             y: sumY / count
         });
     }
-    const der = [];
-    for (let i = 0; i < ps.length - 1; i++) {
-        let x = (smooth[i].x + smooth[i + 1].x) / 2;
-        let y = (smooth[i + 1].y - smooth[i].y) / (smooth[i + 1].x - smooth[i].x);
-        der.push({ x, y });
-    }
     lines.push(smooth);
+    let interval = { x: 0, y: 0 };
+    interval.x = Math.min(smooth[0].x, smooth[smooth.length - 1].x);
+    interval.y = Math.max(smooth[0].x, smooth[smooth.length - 1].x);
+    intervals.push(interval);
+    //compute the derivative line
+    const der = [];
+    const derValues = getDerivatives(smooth);
+    for (let i = 0; i < p.length; i++)
+        der.push({ x: smooth[i].x, y: derValues[i] });
     ders.push(der);
 }
 function resetGraph() {
@@ -148,7 +195,7 @@ function drawAxes() {
     ctx.strokeStyle = 'rgb(100 100 100)';
     ctx.lineWidth = 0.5;
     //draw vertical axes
-    const xDiff = 100 / zoom;
+    const xDiff = 50 / zoom;
     let mid = center.x - Math.floor(center.x / xDiff) * xDiff;
     for (let x = 0; x < window.innerWidth; x += xDiff) {
         if (mid + x == center.x)
@@ -157,7 +204,7 @@ function drawAxes() {
         ctx.lineTo(mid + x, window.innerHeight);
     }
     //draw horizontal axes
-    const yDiff = 100 / zoom;
+    const yDiff = 50 / zoom;
     mid = center.y - Math.floor(center.y / yDiff) * yDiff;
     for (let y = 0; y < window.innerHeight; y += yDiff) {
         if (mid + y == center.y)
@@ -177,7 +224,7 @@ function drawAxes() {
 }
 function drawLine(l, d) {
     ctx.lineWidth = 1.5;
-    const yDiff = 100 / zoom;
+    const yDiff = 50 / zoom;
     ctx.beginPath();
     ctx.strokeStyle = 'rgb(40 240 40)';
     ctx.moveTo(l[0].x / zoom + center.x, l[0].y / zoom + center.y);
@@ -187,7 +234,30 @@ function drawLine(l, d) {
     ctx.beginPath();
     ctx.strokeStyle = 'rgb(240 40 40)';
     ctx.moveTo(d[0].x / zoom + center.x, d[0].y * yDiff + center.y);
-    for (let i = 1; i < d.length - 1; i++)
+    for (let i = 1; i < d.length; i++)
         ctx.lineTo(d[i].x / zoom + center.x, d[i].y * yDiff + center.y);
     ctx.stroke();
+}
+//reference: https://en.wikipedia.org/wiki/Akima_spline
+function getDerivatives(p) {
+    const m = [];
+    for (let i = 0; i < p.length - 1; i++)
+        m.push((p[i + 1].y - p[i].y) / (p[i + 1].x - p[i].x));
+    const s = [];
+    //special handling for s(1) and s(2)
+    s.push(m[0]);
+    s.push((m[0] + m[1]) / 2);
+    for (let i = 2; i < p.length - 2; i++) {
+        let a = Math.abs(m[i + 1] - m[i]);
+        let b = Math.abs(m[i - 1] - m[i - 2]);
+        let den = a + b;
+        if (den == 0)
+            s.push((m[i - 1] + m[i]) / 2);
+        else
+            s.push((a * m[i - 1] + b * m[i]) / den);
+    }
+    //special handling for s(n-1) and s(n)
+    s.push((m[p.length - 3] + m[p.length - 2]) / 2);
+    s.push(m[p.length - 2]);
+    return s;
 }
