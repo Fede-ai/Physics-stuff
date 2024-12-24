@@ -49,14 +49,14 @@ canvas.addEventListener('mousedown', (event) => {
         rightBound = Infinity;
         leftBound = -Infinity;
         direction = '';
-        //dont let functions overlap
+        //calculate the current available interval
         for (let i = 0; i < intervals.length; i++) {
-            if (p.x > intervals[i].x && p.x < intervals[i].y)
+            if (p.x > intervals[i].start && p.x < intervals[i].end)
                 return;
-            else if (p.x < intervals[i].x)
-                rightBound = Math.min(rightBound, intervals[i].x);
-            else if (p.x > intervals[i].y)
-                leftBound = Math.max(leftBound, intervals[i].y);
+            else if (p.x < intervals[i].start)
+                rightBound = Math.min(rightBound, intervals[i].start);
+            else if (p.x > intervals[i].end)
+                leftBound = Math.max(leftBound, intervals[i].end);
         }
         isDrawing = true;
         currentLine.push(p);
@@ -84,7 +84,7 @@ canvas.addEventListener('wheel', (event) => {
     event.preventDefault();
     const startZoom = zoom;
     zoom *= (1 + event.deltaY / 1000);
-    zoom = Math.min(Math.max(zoom, 0.15), 3);
+    zoom = Math.min(Math.max(zoom, 0.1), 3);
     const d = zoom / startZoom;
     center.x = (center.x - window.innerWidth / 2) / d + window.innerWidth / 2;
     center.y = (center.y - window.innerHeight / 2) / d + window.innerHeight / 2;
@@ -104,17 +104,18 @@ canvas.addEventListener('mouseleave', (_) => {
 //move canvas if right click is down
 let lastMove = performance.now();
 let lastDraw = performance.now();
+let moveInt = 30, drawInt = 10;
 canvas.addEventListener('mousemove', (event) => {
     const currentTime = performance.now();
     const x = event.clientX, y = event.clientY;
-    if (isMoving && currentTime - lastMove > 40) {
+    if (isMoving && currentTime - lastMove > moveInt) {
         center.x += x - lastMousePos.x;
         center.y += y - lastMousePos.y;
         lastMove = currentTime;
         lastMousePos = { x, y };
         resetGraph();
     }
-    if (isDrawing && currentTime - lastDraw > 10) {
+    if (isDrawing && currentTime - lastDraw > drawInt) {
         const p = { x: (x - center.x) * zoom, y: (y - center.y) * zoom };
         const n = currentLine.length;
         //stop drawing not to everlap other functions
@@ -151,35 +152,25 @@ function finalizeLine(p) {
         return;
     while (p[p.length - 1].x === p[p.length - 2].x)
         p.pop();
-    //smoothen the line
-    const smooth = [];
-    for (let i = 0; i < p.length; i++) {
-        let sumX = 0;
-        let sumY = 0;
-        let count = 0;
-        for (let j = -3; j <= 3; j++) {
-            const idx = i + j;
-            if (idx >= 0 && idx < p.length) {
-                sumX += p[idx].x;
-                sumY += p[idx].y;
-                count++;
-            }
-        }
-        smooth.push({
-            x: sumX / count,
-            y: sumY / count
-        });
+    if (direction == 'l')
+        p = p.reverse();
+    const smooth = smoothen(p, 4);
+    let spline = akimaSpline(smooth);
+    let line = [];
+    let der = [];
+    for (let x = smooth[0].x; x < smooth[smooth.length - 1].x; x++) {
+        let a = spline(x);
+        line.push({ x, y: a.y });
+        der.push({ x, y: a.d });
     }
-    lines.push(smooth);
-    let interval = { x: 0, y: 0 };
-    interval.x = Math.min(smooth[0].x, smooth[smooth.length - 1].x);
-    interval.y = Math.max(smooth[0].x, smooth[smooth.length - 1].x);
-    intervals.push(interval);
-    //compute the derivative line
-    const der = [];
-    const derValues = getDerivatives(smooth);
-    for (let i = 0; i < p.length; i++)
-        der.push({ x: smooth[i].x, y: derValues[i] });
+    if (line.length <= 16)
+        return;
+    line = smoothen(line, 8);
+    der = smoothen(der, 8);
+    let x1 = line[0].x;
+    let x2 = line[line.length - 1].x;
+    intervals.push({ start: x1, end: x2 });
+    lines.push(line);
     ders.push(der);
 }
 function resetGraph() {
@@ -238,8 +229,8 @@ function drawLine(l, d) {
         ctx.lineTo(d[i].x / zoom + center.x, d[i].y * yDiff + center.y);
     ctx.stroke();
 }
-//reference: https://en.wikipedia.org/wiki/Akima_spline
-function getDerivatives(p) {
+function akimaSpline(p) {
+    //calculate slopes between every point
     const m = [];
     for (let i = 0; i < p.length - 1; i++)
         m.push((p[i + 1].y - p[i].y) / (p[i + 1].x - p[i].x));
@@ -247,6 +238,7 @@ function getDerivatives(p) {
     //special handling for s(1) and s(2)
     s.push(m[0]);
     s.push((m[0] + m[1]) / 2);
+    //calculate derivative at every point
     for (let i = 2; i < p.length - 2; i++) {
         let a = Math.abs(m[i + 1] - m[i]);
         let b = Math.abs(m[i - 1] - m[i - 2]);
@@ -259,5 +251,33 @@ function getDerivatives(p) {
     //special handling for s(n-1) and s(n)
     s.push((m[p.length - 3] + m[p.length - 2]) / 2);
     s.push(m[p.length - 2]);
-    return s;
+    return function (x) {
+        for (let i = 0; i < p.length - 1; i++) {
+            if (x > p[i + 1].x)
+                continue;
+            //return { y: p[i].y, d: s[i] };
+            let a = p[i].y;
+            let b = s[i];
+            let c = (3 * m[i] - 2 * s[i] - s[i + 1]) / (p[i + 1].x - p[i].x);
+            let d = (s[i] + s[i + 1] - 2 * m[i]) / (p[i + 1].x - p[i].x) ** 2;
+            let dx = x - p[i].x;
+            let y = a + b * dx + c * dx ** 2 + d * dx ** 3;
+            let der = b + 2 * c * dx + 3 * d * dx ** 2;
+            return { y, d: der };
+        }
+        throw Error("Bug with Akima spline");
+    };
+}
+function smoothen(p, n) {
+    const smooth = [];
+    for (let i = n; i < p.length - n; i++) {
+        let xSum = 0, ySum = 0;
+        for (let j = -n; j <= n; j++) {
+            const idx = i + j;
+            xSum += p[idx].x;
+            ySum += p[idx].y;
+        }
+        smooth.push({ x: xSum / (2 * n + 1), y: ySum / (2 * n + 1) });
+    }
+    return smooth;
 }
