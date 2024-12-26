@@ -104,7 +104,7 @@ canvas.addEventListener('mouseleave', (_) => {
 //move canvas if right click is down
 let lastMove = performance.now();
 let lastDraw = performance.now();
-let moveInt = 30, drawInt = 10;
+let moveInt = 25, drawInt = 10;
 canvas.addEventListener('mousemove', (event) => {
     const currentTime = performance.now();
     const x = event.clientX, y = event.clientY;
@@ -130,7 +130,7 @@ canvas.addEventListener('mousemove', (event) => {
         }
         //draw segment to join the new point
         ctx.beginPath();
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 2;
         ctx.strokeStyle = 'rgb(40 40 240)';
         ctx.moveTo(currentLine[n - 1].x / zoom + center.x, currentLine[n - 1].y / zoom + center.y);
         ctx.lineTo(p.x / zoom + center.x, p.y / zoom + center.y);
@@ -148,28 +148,49 @@ canvas.addEventListener('mousemove', (event) => {
     }
 });
 function finalizeLine(p) {
-    if (p.length < 10)
+    //avoid crash when removing tail
+    if (p.length < 5)
         return;
+    //remove ending vertical tail
     while (p[p.length - 1].x === p[p.length - 2].x)
         p.pop();
+    //avoid crash after smoothening
+    if (p.length < 5)
+        return;
     if (direction == 'l')
         p = p.reverse();
-    const smooth = smoothen(p, 4);
+    //smoothen the line
+    const smooth = smoothen(p, 3);
+    //since the smoothening messes up the derivative at the extremities
+    let derInt = { start: smooth[3].x, end: smooth[smooth.length - 3].x };
     let spline = akimaSpline(smooth);
     let line = [];
     let der = [];
+    //use the spline to evenly space the points
     for (let x = smooth[0].x; x < smooth[smooth.length - 1].x; x++) {
         let a = spline(x);
         line.push({ x, y: a.y });
-        der.push({ x, y: a.d });
+        if (x > derInt.start && x < derInt.end)
+            der.push({ x, y: a.d });
     }
-    if (line.length <= 16)
+    //remove line if too short
+    if (line.length <= 20)
         return;
-    line = smoothen(line, 8);
-    der = smoothen(der, 8);
-    let x1 = line[0].x;
-    let x2 = line[line.length - 1].x;
-    intervals.push({ start: x1, end: x2 });
+    //correct for missing derivate at the extremities
+    let ms = (der[0].y - der[1].y) / (der[0].x - der[1].x);
+    for (let x = derInt.start; x > smooth[0].x; x--)
+        der.unshift({ x, y: der[0].y - ms });
+    let n = der.length - 1;
+    let me = (der[n - 1].y - der[n].y) / (der[n - 1].x - der[n].x);
+    for (let x = derInt.end; x < smooth[smooth.length - 1].x; x++)
+        der.push({ x, y: der[der.length - 1].y + me });
+    //add additional smoothening
+    line = smoothen(line, 3);
+    der = smoothen(der, 9);
+    //calculate the domain
+    let xs = line[0].x;
+    let xe = line[line.length - 1].x;
+    intervals.push({ start: xs, end: xe });
     lines.push(line);
     ders.push(der);
 }
@@ -206,7 +227,7 @@ function drawAxes() {
     ctx.stroke();
     ctx.beginPath();
     ctx.strokeStyle = 'white';
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 2;
     ctx.moveTo(0, center.y);
     ctx.lineTo(window.innerWidth, center.y);
     ctx.moveTo(center.x, 0);
@@ -214,7 +235,7 @@ function drawAxes() {
     ctx.stroke();
 }
 function drawLine(l, d) {
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 2;
     const yDiff = 50 / zoom;
     ctx.beginPath();
     ctx.strokeStyle = 'rgb(40 240 40)';
@@ -269,13 +290,32 @@ function akimaSpline(p) {
     };
 }
 function smoothen(p, n) {
+    //initial subtle smoothening
+    let s = [];
+    s.push(p[0]);
+    for (let i = 1; i < p.length - 1; i++) {
+        let x = (p[i - 1].x + p[i].x + p[i + 1].x) / 3;
+        let y = (p[i - 1].y + p[i].y + p[i + 1].y) / 3;
+        s.push({ x, y });
+    }
+    s.push(p[p.length - 1]);
+    //extend both ends to avoid contraction
+    let x1 = s[0].x - s[1].x;
+    let y1 = s[0].y - s[1].y;
+    let x2 = s[s.length - 1].x - s[s.length - 2].x;
+    let y2 = s[s.length - 1].y - s[s.length - 2].y;
+    for (let i = 0; i < n; i++) {
+        s.unshift({ x: s[0].x + x1, y: s[0].y + y1 });
+        s.push({ x: s[s.length - 1].x + x2, y: s[s.length - 1].y + y2 });
+    }
+    //perform actual smoothening
     const smooth = [];
-    for (let i = n; i < p.length - n; i++) {
+    for (let i = n; i < s.length - n; i++) {
         let xSum = 0, ySum = 0;
         for (let j = -n; j <= n; j++) {
             const idx = i + j;
-            xSum += p[idx].x;
-            ySum += p[idx].y;
+            xSum += s[idx].x;
+            ySum += s[idx].y;
         }
         smooth.push({ x: xSum / (2 * n + 1), y: ySum / (2 * n + 1) });
     }
