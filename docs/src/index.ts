@@ -42,6 +42,28 @@ window.addEventListener('contextmenu', (event) => {
 	event.preventDefault();
 })
 
+const buttons = document.getElementById('buttons') as HTMLDivElement;
+const cr = document.getElementById('cr') as HTMLDivElement;
+const ver = document.getElementById('ver') as HTMLDivElement;
+buttons.addEventListener('wheel', (event) => {
+	event.preventDefault();
+})
+cr.addEventListener('wheel', (event) => {
+	event.preventDefault();
+})
+ver.addEventListener('wheel', (event) => {
+	event.preventDefault();
+})
+buttons.addEventListener('touchmove', (event) => {
+	event.preventDefault();
+})
+cr.addEventListener('touchmove', (event) => {
+	event.preventDefault();
+})
+ver.addEventListener('touchmove', (event) => {
+	event.preventDefault();
+})
+
 const back = document.getElementById('back') as HTMLDivElement;
 const draw = document.getElementById('draw') as HTMLDivElement;
 draw.style.borderColor = "rgb(160, 40, 40)"

@@ -3,6 +3,7 @@ body {
 	height: 100%;
 	width: 100%;
 	margin: 0;
+	overflow: hidden;
 }
 
 canvas {
@@ -13,27 +14,34 @@ canvas {
 .buttons {
 	position: absolute;
 	display: flex;
+	user-select: none;
 	left: 0vh;
 	top: 1.5vh;
-	font-size: 4vh;
-	user-select: none;
 
 	.button {
 		background-color: rgb(50, 50, 50);
 		margin-left: 1.5vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 
 		border: 0.4vh solid rgb(50, 50, 50);
 		border-radius: 2vh;
+		width: 6vh;
+		height: 5vh;
+		padding: 0.5vh;
 
-		padding-bottom: 0.8vh;
-		padding-left: 0.8vh;
-		padding-right: 0.8vh;
+		img {
+			width: 5vh;
+			height: 5vh;
+			user-select: none;
+		}
 	}
+
 	.button:active {
 		background-color: rgb(35, 35, 35);
 	}
 }
-
 
 .cr {
 	position: absolute;
@@ -45,6 +53,7 @@ canvas {
 	font-size: 3vh;
 	left: 2vh;
 }
+
 .ver {
 	position: absolute;
 	color: rgb(180, 180, 180);
