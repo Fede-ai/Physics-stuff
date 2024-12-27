@@ -21,6 +21,7 @@ let lastMousePos;
 let isMoving = false, isDrawing = false, isErasing = false;
 let traceMode = 'd'; //drawing is selected at first
 let zoom = 1;
+let touchesDistance = 0;
 drawAxes();
 //resize and redraw canvas
 window.addEventListener('resize', () => {
@@ -36,6 +37,7 @@ const back = document.getElementById('back');
 const draw = document.getElementById('draw');
 draw.style.borderColor = "rgb(160, 40, 40)";
 const erase = document.getElementById('erase');
+const move = document.getElementById('move');
 back.addEventListener('mousedown', (_) => {
     if (!isDrawing && !isMoving && lines.length > 0) {
         lines.pop();
@@ -48,17 +50,39 @@ draw.addEventListener('mousedown', (_) => {
     traceMode = 'd';
     draw.style.borderColor = "rgb(160, 40, 40)";
     erase.style.borderColor = "rgb(50, 50, 50)";
+    move.style.borderColor = "rgb(50, 50, 50)";
 });
 erase.addEventListener('mousedown', (_) => {
     traceMode = 'e';
-    erase.style.borderColor = "rgb(160, 40, 40)";
     draw.style.borderColor = "rgb(50, 50, 50)";
+    erase.style.borderColor = "rgb(160, 40, 40)";
+    move.style.borderColor = "rgb(50, 50, 50)";
+});
+move.addEventListener('mousedown', (_) => {
+    traceMode = 'm';
+    erase.style.borderColor = "rgb(50, 50, 50)";
+    draw.style.borderColor = "rgb(50, 50, 50)";
+    move.style.borderColor = "rgb(160, 40, 40)";
 });
 //start drawing/erasing or moving
 canvas.addEventListener('mousedown', (event) => {
-    const x = event.clientX, y = event.clientY;
+    startAction(event.clientX, event.clientY, event.button);
+});
+canvas.addEventListener('touchstart', (event) => {
+    if (event.touches.length == 1) {
+        let touch = event.touches[0];
+        startAction(touch.clientX, touch.clientY, 0);
+    }
+    else if (event.touches.length == 2) {
+        let t1 = event.touches[0], t2 = event.touches[1];
+        const dx = t2.clientX - t1.clientX;
+        const dy = t2.clientY - t1.clientY;
+        touchesDistance = Math.sqrt(dx * dx + dy * dy);
+    }
+});
+function startAction(x, y, b) {
     //start drawing or erasing
-    if (event.button == 0 && !isMoving && !isDrawing && !isErasing) {
+    if (b == 0 && !isMoving && !isDrawing && !isErasing) {
         //start drawing if initial position is valid
         if (traceMode == 'd') {
             const p = { x: (x - center.x) * zoom, y: (y - center.y) * zoom };
@@ -86,36 +110,44 @@ canvas.addEventListener('mousedown', (event) => {
             eraseCircle(x, y);
             isErasing = true;
         }
+        //start moving
+        else if (traceMode == 'm') {
+            isMoving = true;
+            lastMousePos = { x, y };
+        }
     }
     //start moving
-    else if (event.button == 2 && !isDrawing && !isErasing) {
+    else if (b == 2 && !isDrawing && !isErasing) {
         isMoving = true;
         lastMousePos = { x, y };
     }
+}
+//write, draw, move or zoom
+canvas.addEventListener('mousemove', (event) => {
+    performAction(event.clientX, event.clientY);
 });
-//stop drawing/erasing or moving
-canvas.addEventListener('mouseup', (event) => {
-    if (event.button == 0) {
-        if (isDrawing) {
-            isDrawing = false;
-            finalizeLine(currentLine);
-            currentLine = [];
-            resetGraph();
-        }
-        if (isErasing) {
-            isErasing = false;
-            resetGraph();
-        }
+canvas.addEventListener('touchmove', (event) => {
+    event.preventDefault();
+    if (event.touches.length == 1) {
+        let touch = event.touches[0];
+        performAction(touch.clientX, touch.clientY);
     }
-    else if (event.button == 2) {
-        isMoving = false;
+    else if (event.touches.length == 2) {
+        let t1 = event.touches[0], t2 = event.touches[1];
+        const dx = t2.clientX - t1.clientX;
+        const dy = t2.clientY - t1.clientY;
+        const newDistance = Math.sqrt(dx * dx + dy * dy);
+        performZoom((touchesDistance - newDistance) * 3);
+        touchesDistance = newDistance;
     }
 });
-//zoom
 canvas.addEventListener('wheel', (event) => {
     event.preventDefault();
+    performZoom(event.deltaY);
+});
+function performZoom(delta) {
     const startZoom = zoom;
-    zoom *= (1 + event.deltaY / 1000);
+    zoom *= (1 + delta / 1000);
     zoom = Math.min(Math.max(zoom, 0.1), 3);
     const d = zoom / startZoom;
     center.x = (center.x - window.innerWidth / 2) / d + window.innerWidth / 2;
@@ -127,29 +159,12 @@ canvas.addEventListener('wheel', (event) => {
     }
     isErasing = false;
     resetGraph();
-});
-//stop moving and drawing
-canvas.addEventListener('mouseleave', (_) => {
-    if (isDrawing) {
-        isDrawing = false;
-        finalizeLine(currentLine);
-        currentLine = [];
-        resetGraph();
-    }
-    if (isErasing) {
-        isErasing = false;
-        resetGraph();
-    }
-    isMoving = false;
-});
-//move canvas if right click is down
-let lastMove = performance.now();
-let lastDraw = performance.now();
-let lastErase = performance.now();
-let moveInt = 25, drawInt = 10, eraseInt = 40;
-canvas.addEventListener('mousemove', (event) => {
+}
+let now = performance.now();
+let lastMove = now, lastDraw = now, lastErase = now;
+const moveInt = 25, drawInt = 10, eraseInt = 40;
+function performAction(x, y) {
     const currentTime = performance.now();
-    const x = event.clientX, y = event.clientY;
     if (isMoving && currentTime - lastMove > moveInt) {
         center.x += x - lastMousePos.x;
         center.y += y - lastMousePos.y;
@@ -197,6 +212,52 @@ canvas.addEventListener('mousemove', (event) => {
         eraseCircle(x, y);
         lastErase = currentTime;
     }
+}
+//stop drawing/erasing or moving
+canvas.addEventListener('mouseleave', (_) => {
+    endAction();
+});
+canvas.addEventListener('touchend', (_) => {
+    endAction();
+});
+canvas.addEventListener('touchcancel', (_) => {
+    endAction();
+});
+function endAction() {
+    if (isDrawing) {
+        isDrawing = false;
+        finalizeLine(currentLine);
+        currentLine = [];
+        resetGraph();
+    }
+    if (isErasing) {
+        isErasing = false;
+        resetGraph();
+    }
+    isMoving = false;
+}
+//this case is handled apart
+canvas.addEventListener('mouseup', (event) => {
+    if (event.button == 0) {
+        if (isDrawing) {
+            isDrawing = false;
+            finalizeLine(currentLine);
+            currentLine = [];
+            resetGraph();
+        }
+        if (isErasing) {
+            isErasing = false;
+            resetGraph();
+        }
+        //stop moving if right button is not pressed
+        if (isMoving && (event.buttons & 2) != 2) {
+            isMoving = false;
+        }
+    }
+    //stop moving if left button is not pressed
+    else if (event.button == 2 && ((event.buttons & 1) != 1 || traceMode != 'm')) {
+        isMoving = false;
+    }
 });
 function finalizeLine(p) {
     //avoid crash when removing tail
@@ -222,9 +283,29 @@ function finalizeLine(p) {
     //remove line if too short
     if (line.length < 20)
         return;
-    //calculate the derivative line
+    //calculate slopes between every point
+    const m = [];
+    for (let i = 0; i < line.length - 1; i++)
+        m.push((line[i + 1].y - line[i].y) / (line[i + 1].x - line[i].x));
+    const s = [];
+    //special handling for s(1) and s(2)
+    s.push(m[0]);
+    s.push((m[0] + m[1]) / 2);
+    //calculate derivative at every point
+    for (let i = 2; i < line.length - 2; i++) {
+        let a = Math.abs(m[i + 1] - m[i]);
+        let b = Math.abs(m[i - 1] - m[i - 2]);
+        let den = a + b;
+        if (den == 0)
+            s.push((m[i - 1] + m[i]) / 2);
+        else
+            s.push((a * m[i - 1] + b * m[i]) / den);
+    }
+    //special handling for s(n-1) and s(n)
+    s.push((m[line.length - 3] + m[line.length - 2]) / 2);
+    s.push(m[line.length - 2]);
+    //create derivative line and smoothen it
     let der = [];
-    let s = getDerivatives(line);
     for (let i = 0; i < line.length; i++)
         der.push({ x: line[i].x, y: s[i] });
     der = smoothen(der, 10);
@@ -361,7 +442,6 @@ function eraseCircle(x, y) {
     }
 }
 function splitLine(l, p) {
-    console.log("LINE SPLIT");
     intervals.splice(l, 1);
     let l2 = lines.splice(l, 1)[0];
     let l1 = l2.splice(0, p);
@@ -381,30 +461,6 @@ function splitLine(l, p) {
     }
 }
 //reference: https://en.wikipedia.org/wiki/Akima_spline
-function getDerivatives(p) {
-    //calculate slopes between every point
-    const m = [];
-    for (let i = 0; i < p.length - 1; i++)
-        m.push((p[i + 1].y - p[i].y) / (p[i + 1].x - p[i].x));
-    const s = [];
-    //special handling for s(1) and s(2)
-    s.push(m[0]);
-    s.push((m[0] + m[1]) / 2);
-    //calculate derivative at every point
-    for (let i = 2; i < p.length - 2; i++) {
-        let a = Math.abs(m[i + 1] - m[i]);
-        let b = Math.abs(m[i - 1] - m[i - 2]);
-        let den = a + b;
-        if (den == 0)
-            s.push((m[i - 1] + m[i]) / 2);
-        else
-            s.push((a * m[i - 1] + b * m[i]) / den);
-    }
-    //special handling for s(n-1) and s(n)
-    s.push((m[p.length - 3] + m[p.length - 2]) / 2);
-    s.push(m[p.length - 2]);
-    return s;
-}
 function akimaSpline(p) {
     //calculate slopes between every point
     const m = [];
