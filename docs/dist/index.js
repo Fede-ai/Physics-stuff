@@ -1,5 +1,4 @@
 "use strict";
-var _a;
 const canvas = document.getElementById('graph');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -19,7 +18,8 @@ let leftBound = -Infinity;
 let direction = '';
 let center = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 let lastMousePos;
-let isMoving = false, isDrawing = false;
+let isMoving = false, isDrawing = false, isErasing = false;
+let traceMode = 'd'; //drawing is selected at first
 let zoom = 1;
 drawAxes();
 //resize and redraw canvas
@@ -32,7 +32,11 @@ window.addEventListener('resize', () => {
 window.addEventListener('contextmenu', (event) => {
     event.preventDefault();
 });
-(_a = document.getElementById('back')) === null || _a === void 0 ? void 0 : _a.addEventListener('mousedown', (_) => {
+const back = document.getElementById('back');
+const draw = document.getElementById('draw');
+draw.style.borderColor = "rgb(160, 40, 40)";
+const erase = document.getElementById('erase');
+back.addEventListener('mousedown', (_) => {
     if (!isDrawing && !isMoving && lines.length > 0) {
         lines.pop();
         ders.pop();
@@ -40,40 +44,68 @@ window.addEventListener('contextmenu', (event) => {
         resetGraph();
     }
 });
-//start drawing or moving
+draw.addEventListener('mousedown', (_) => {
+    traceMode = 'd';
+    draw.style.borderColor = "rgb(160, 40, 40)";
+    erase.style.borderColor = "rgb(50, 50, 50)";
+});
+erase.addEventListener('mousedown', (_) => {
+    traceMode = 'e';
+    erase.style.borderColor = "rgb(160, 40, 40)";
+    draw.style.borderColor = "rgb(50, 50, 50)";
+});
+//start drawing/erasing or moving
 canvas.addEventListener('mousedown', (event) => {
     const x = event.clientX, y = event.clientY;
-    //start drawing
-    if (event.button == 0 && !isMoving && !isDrawing) {
-        const p = { x: (x - center.x) * zoom, y: (y - center.y) * zoom };
-        rightBound = Infinity;
-        leftBound = -Infinity;
-        direction = '';
-        //calculate the current available interval
-        for (let i = 0; i < intervals.length; i++) {
-            if (p.x > intervals[i].start && p.x < intervals[i].end)
-                return;
-            else if (p.x < intervals[i].start)
-                rightBound = Math.min(rightBound, intervals[i].start);
-            else if (p.x > intervals[i].end)
-                leftBound = Math.max(leftBound, intervals[i].end);
+    //start drawing or erasing
+    if (event.button == 0 && !isMoving && !isDrawing && !isErasing) {
+        //start drawing if initial position is valid
+        if (traceMode == 'd') {
+            const p = { x: (x - center.x) * zoom, y: (y - center.y) * zoom };
+            rightBound = Infinity;
+            leftBound = -Infinity;
+            direction = '';
+            //calculate the current available interval
+            for (let i = 0; i < intervals.length; i++) {
+                if (p.x > intervals[i].start && p.x < intervals[i].end)
+                    return;
+                else if (p.x < intervals[i].start)
+                    rightBound = Math.min(rightBound, intervals[i].start);
+                else if (p.x > intervals[i].end)
+                    leftBound = Math.max(leftBound, intervals[i].end);
+            }
+            isDrawing = true;
+            currentLine.push(p);
         }
-        isDrawing = true;
-        currentLine.push(p);
+        //start erasing
+        else if (traceMode == 'e') {
+            ctx.beginPath();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.arc(x, y, 25, 0, 2 * Math.PI);
+            ctx.fill();
+            eraseCircle(x, y);
+            isErasing = true;
+        }
     }
     //start moving
-    else if (event.button == 2 && !isDrawing) {
+    else if (event.button == 2 && !isDrawing && !isErasing) {
         isMoving = true;
         lastMousePos = { x, y };
     }
 });
-//stop moving
+//stop drawing/erasing or moving
 canvas.addEventListener('mouseup', (event) => {
     if (event.button == 0) {
-        isDrawing = false;
-        finalizeLine(currentLine);
-        currentLine = [];
-        resetGraph();
+        if (isDrawing) {
+            isDrawing = false;
+            finalizeLine(currentLine);
+            currentLine = [];
+            resetGraph();
+        }
+        if (isErasing) {
+            isErasing = false;
+            resetGraph();
+        }
     }
     else if (event.button == 2) {
         isMoving = false;
@@ -88,23 +120,33 @@ canvas.addEventListener('wheel', (event) => {
     const d = zoom / startZoom;
     center.x = (center.x - window.innerWidth / 2) / d + window.innerWidth / 2;
     center.y = (center.y - window.innerHeight / 2) / d + window.innerHeight / 2;
-    isDrawing = false;
-    finalizeLine(currentLine);
-    currentLine = [];
+    if (isDrawing) {
+        isDrawing = false;
+        finalizeLine(currentLine);
+        currentLine = [];
+    }
+    isErasing = false;
     resetGraph();
 });
 //stop moving and drawing
 canvas.addEventListener('mouseleave', (_) => {
+    if (isDrawing) {
+        isDrawing = false;
+        finalizeLine(currentLine);
+        currentLine = [];
+        resetGraph();
+    }
+    if (isErasing) {
+        isErasing = false;
+        resetGraph();
+    }
     isMoving = false;
-    isDrawing = false;
-    finalizeLine(currentLine);
-    currentLine = [];
-    resetGraph();
 });
 //move canvas if right click is down
 let lastMove = performance.now();
 let lastDraw = performance.now();
-let moveInt = 25, drawInt = 10;
+let lastErase = performance.now();
+let moveInt = 25, drawInt = 10, eraseInt = 40;
 canvas.addEventListener('mousemove', (event) => {
     const currentTime = performance.now();
     const x = event.clientX, y = event.clientY;
@@ -146,6 +188,15 @@ canvas.addEventListener('mousemove', (event) => {
             direction = 'l';
         lastDraw = currentTime;
     }
+    if (isErasing && currentTime - lastErase > eraseInt) {
+        resetGraph();
+        ctx.beginPath();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.arc(x, y, 25, 0, 2 * Math.PI);
+        ctx.fill();
+        eraseCircle(x, y);
+        lastErase = currentTime;
+    }
 });
 function finalizeLine(p) {
     //avoid crash when removing tail
@@ -160,33 +211,23 @@ function finalizeLine(p) {
     if (direction == 'l')
         p = p.reverse();
     //smoothen the line
-    const smooth = smoothen(p, 3);
-    //since the smoothening messes up the derivative at the extremities
-    let derInt = { start: smooth[3].x, end: smooth[smooth.length - 3].x };
+    const smooth = smoothen(p, 4);
     let spline = akimaSpline(smooth);
     let line = [];
-    let der = [];
     //use the spline to evenly space the points
-    for (let x = smooth[0].x; x < smooth[smooth.length - 1].x; x++) {
-        let a = spline(x);
-        line.push({ x, y: a.y });
-        if (x > derInt.start && x < derInt.end)
-            der.push({ x, y: a.d });
-    }
-    //remove line if too short
-    if (line.length <= 20)
-        return;
-    //correct for missing derivate at the extremities
-    let ms = (der[0].y - der[1].y) / (der[0].x - der[1].x);
-    for (let x = derInt.start; x > smooth[0].x; x--)
-        der.unshift({ x, y: der[0].y - ms });
-    let n = der.length - 1;
-    let me = (der[n - 1].y - der[n].y) / (der[n - 1].x - der[n].x);
-    for (let x = derInt.end; x < smooth[smooth.length - 1].x; x++)
-        der.push({ x, y: der[der.length - 1].y + me });
+    for (let x = smooth[0].x; x < smooth[smooth.length - 1].x; x++)
+        line.push({ x, y: spline(x) });
     //add additional smoothening
-    line = smoothen(line, 3);
-    der = smoothen(der, 9);
+    line = smoothen(line, 4);
+    //remove line if too short
+    if (line.length < 20)
+        return;
+    //calculate the derivative line
+    let der = [];
+    let s = getDerivatives(line);
+    for (let i = 0; i < line.length; i++)
+        der.push({ x: line[i].x, y: s[i] });
+    der = smoothen(der, 10);
     //calculate the domain
     let xs = line[0].x;
     let xe = line[line.length - 1].x;
@@ -250,6 +291,120 @@ function drawLine(l, d) {
         ctx.lineTo(d[i].x / zoom + center.x, d[i].y * yDiff + center.y);
     ctx.stroke();
 }
+function eraseCircle(x, y) {
+    const cx = (x - center.x) * zoom;
+    const cy = (y - center.y) * zoom;
+    //loop through all the lines
+    for (let i = 0; i < lines.length; i++) {
+        //skip if line is far from the mouse
+        if (intervals[i].start > cx + 25 * zoom ||
+            intervals[i].end < cx - 25 * zoom)
+            continue;
+        let deletedLine = false;
+        //erase points from the start of the line
+        while (!deletedLine) {
+            let dx = (lines[i][0].x - cx) ** 2;
+            let dy = (lines[i][0].y - cy) ** 2;
+            if (Math.sqrt(dx + dy) < 25 * zoom) {
+                //erase the whole line (= cus it will decrease by 1)
+                if (lines[i].length <= 20) {
+                    lines.splice(i, 1);
+                    ders.splice(i, 1);
+                    intervals.splice(i, 1);
+                    deletedLine = true;
+                }
+                //erase one point
+                else {
+                    lines[i].shift();
+                    ders[i].shift();
+                    intervals[i].start = lines[i][0].x;
+                }
+            }
+            else
+                break;
+        }
+        //erase points from the end of the line
+        while (!deletedLine) {
+            let dx = (lines[i][lines[i].length - 1].x - cx) ** 2;
+            let dy = (lines[i][lines[i].length - 1].y - cy) ** 2;
+            if (Math.sqrt(dx + dy) < 25 * zoom) {
+                //erase the whole line (= cus it will decrease by 1)
+                if (lines[i].length <= 20) {
+                    lines.splice(i, 1);
+                    ders.splice(i, 1);
+                    intervals.splice(i, 1);
+                    deletedLine = true;
+                }
+                //erase one point
+                else {
+                    lines[i].pop();
+                    ders[i].pop();
+                    intervals[i].end = lines[i][lines[i].length - 1].x;
+                }
+            }
+            else
+                break;
+        }
+        if (deletedLine)
+            continue;
+        //erase points from the middle of the line
+        for (let j = 0; j < lines[i].length; j++) {
+            let dx = (lines[i][j].x - cx) ** 2;
+            let dy = (lines[i][j].y - cy) ** 2;
+            if (Math.sqrt(dx + dy) < 25 * zoom) {
+                splitLine(i, j);
+                //loop again throught the last line
+                i--;
+                break;
+            }
+        }
+    }
+}
+function splitLine(l, p) {
+    console.log("LINE SPLIT");
+    intervals.splice(l, 1);
+    let l2 = lines.splice(l, 1)[0];
+    let l1 = l2.splice(0, p);
+    l2.splice(0, 1);
+    let d2 = ders.splice(l, 1)[0];
+    let d1 = d2.splice(0, p);
+    d2.splice(0, 1);
+    if (l1.length >= 20) {
+        lines.push(l1);
+        ders.push(d1);
+        intervals.push({ start: l1[0].x, end: l1[l1.length - 1].x });
+    }
+    if (l2.length >= 20) {
+        lines.push(l2);
+        ders.push(d2);
+        intervals.push({ start: l2[0].x, end: l2[l2.length - 1].x });
+    }
+}
+//reference: https://en.wikipedia.org/wiki/Akima_spline
+function getDerivatives(p) {
+    //calculate slopes between every point
+    const m = [];
+    for (let i = 0; i < p.length - 1; i++)
+        m.push((p[i + 1].y - p[i].y) / (p[i + 1].x - p[i].x));
+    const s = [];
+    //special handling for s(1) and s(2)
+    s.push(m[0]);
+    s.push((m[0] + m[1]) / 2);
+    //calculate derivative at every point
+    for (let i = 2; i < p.length - 2; i++) {
+        let a = Math.abs(m[i + 1] - m[i]);
+        let b = Math.abs(m[i - 1] - m[i - 2]);
+        let den = a + b;
+        if (den == 0)
+            s.push((m[i - 1] + m[i]) / 2);
+        else
+            s.push((a * m[i - 1] + b * m[i]) / den);
+    }
+    //special handling for s(n-1) and s(n)
+    s.push((m[p.length - 3] + m[p.length - 2]) / 2);
+    s.push(m[p.length - 2]);
+    return s;
+}
 function akimaSpline(p) {
     //calculate slopes between every point
     const m = [];
@@ -283,8 +438,7 @@ function akimaSpline(p) {
             let d = (s[i] + s[i + 1] - 2 * m[i]) / (p[i + 1].x - p[i].x) ** 2;
             let dx = x - p[i].x;
             let y = a + b * dx + c * dx ** 2 + d * dx ** 3;
-            let der = b + 2 * c * dx + 3 * d * dx ** 2;
-            return { y, d: der };
+            return y;
         }
         throw Error("Bug with Akima spline");
     };

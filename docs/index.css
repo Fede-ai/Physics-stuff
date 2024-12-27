@@ -1,7 +1,5 @@
 body {
 	display: flex;
-	justify-content: center;
-	align-items: center;
 	height: 100%;
 	width: 100%;
 	margin: 0;
@@ -11,27 +9,48 @@ canvas {
 	background-color: rgb(20, 20, 20);
 }
 
-.button {
+.buttons {
 	position: absolute;
-	left: 2vh;
-  top: 2vh;
-	font-size: 5vh;
-	border-radius: 2vh;
-	padding-bottom: 0.8vh;
-	padding-left: 0.8vh;
-	padding-right: 0.8vh;
+	display: flex;
+	left: 0vh;
+	top: 1.5vh;
+	font-size: 4vh;
 	user-select: none;
-	background-color: rgb(50, 50, 50);
+
+	.button {
+		background-color: rgb(50, 50, 50);
+		margin-left: 1.5vh;
+
+		border: 0.4vh solid rgb(50, 50, 50);
+		border-radius: 2vh;
+
+		padding-bottom: 0.8vh;
+		padding-left: 0.8vh;
+		padding-right: 0.8vh;
+	}
+	.button:active {
+		background-color: rgb(35, 35, 35);
+	}
 }
-.button:active {
-	background-color: rgb(35, 35, 35);
-}
+
 
 .cr {
 	position: absolute;
 	color: rgb(180, 180, 180);
 	font-family: Helvetica;
-	left: 2vh;
+	user-select: none;
+
   top: 95vh;
 	font-size: 3vh;
+	left: 2vh;
+}
+.ver {
+	position: absolute;
+	color: rgb(180, 180, 180);
+	font-family: Helvetica;
+	user-select: none;
+
+	top: 95vh;
+	font-size: 3vh;
+	right: 2vh;
 }
