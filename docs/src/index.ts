@@ -45,6 +45,7 @@ window.addEventListener('contextmenu', (event) => {
 const buttons = document.getElementById('buttons') as HTMLDivElement;
 const cr = document.getElementById('cr') as HTMLDivElement;
 const ver = document.getElementById('ver') as HTMLDivElement;
+ver.textContent = 'v 1.2.4'
 buttons.addEventListener('wheel', (event) => {
 	event.preventDefault();
 })
@@ -69,7 +70,9 @@ const draw = document.getElementById('draw') as HTMLDivElement;
 draw.style.borderColor = "rgb(160, 40, 40)"
 const erase = document.getElementById('erase') as HTMLDivElement;
 const move = document.getElementById('move') as HTMLDivElement;
-back.addEventListener('mousedown', (_) => {
+back.addEventListener('mousedown', (event) => {
+	event.preventDefault();
+	
 	if (!isDrawing && !isMoving && lines.length > 0) {
 		lines.pop();
 		ders.pop();
@@ -77,19 +80,25 @@ back.addEventListener('mousedown', (_) => {
 		resetGraph();
 	}
 })
-draw.addEventListener('mousedown', (_) => {
+draw.addEventListener('mousedown', (event) => {
+	event.preventDefault();
+	
 	traceMode = 'd'
 	draw.style.borderColor = "rgb(160, 40, 40)"
 	erase.style.borderColor = "rgb(50, 50, 50)"
 	move.style.borderColor = "rgb(50, 50, 50)"
 })
-erase.addEventListener('mousedown', (_) => {
+erase.addEventListener('mousedown', (event) => {
+	event.preventDefault();
+	
 	traceMode = 'e'
 	draw.style.borderColor = "rgb(50, 50, 50)"
 	erase.style.borderColor = "rgb(160, 40, 40)"
 	move.style.borderColor = "rgb(50, 50, 50)"
 })
-move.addEventListener('mousedown', (_) => {
+move.addEventListener('mousedown', (event) => {
+	event.preventDefault();
+	
 	traceMode = 'm'
 	erase.style.borderColor = "rgb(50, 50, 50)"
 	draw.style.borderColor = "rgb(50, 50, 50)"
@@ -202,7 +211,7 @@ function performZoom(delta: number) {
 }
 let now = performance.now();
 let lastMove = now, lastDraw = now, lastErase = now;
-const moveInt = 25, drawInt = 10, eraseInt = 40;
+const moveInt = 25, drawInt = 8, eraseInt = 40;
 function performAction(x: number, y: number) {
 	const currentTime = performance.now();
 
@@ -334,7 +343,7 @@ function finalizeLine(p: Point[]) {
 	
 	let line: Point[] = [];
 	//use the spline to evenly space the points
-	for (let x = smooth[0].x; x < smooth[smooth.length - 1].x; x++)
+	for (let x = smooth[0].x; x < smooth[smooth.length - 1].x; x += zoom)
 		line.push({ x, y: spline(x) });
 	//add additional smoothening
 	line = smoothen(line, 4);
@@ -373,10 +382,25 @@ function finalizeLine(p: Point[]) {
 		der.push({ x: line[i].x, y: s[i] });
 	der = smoothen(der, 10);
 	
+	//join the line with one close to its left
+	for (let i = 0; i < lines.length; i++) {
+		let dx = line[0].x - lines[i][lines[i].length - 1].x;
+		let dy = line[0].y - lines[i][lines[i].length - 1].y;
+
+		if (Math.sqrt(dx**2 + dy**2) < 25 * zoom) {
+			for (let j = 0; j < line.length; j++) {
+				line[j].x -= dx;
+				line[j].y -= dy;
+				der[j].x -= dx;
+			}
+			break;
+		}
+	}
+	
 	//calculate the domain
 	let xs = line[0].x;
 	let xe = line[line.length - 1].x;
-	intervals.push({ start: xs, end: xe });	
+	intervals.push({ start: xs, end: xe }); 
 
 	lines.push(line);
 	ders.push(der);

@@ -47,20 +47,22 @@ canvas {
 	position: absolute;
 	color: rgb(180, 180, 180);
 	font-family: Helvetica;
+	font-weight: bold;
 	user-select: none;
 
-  top: 95vh;
+	bottom: 1.5vh;
 	font-size: 3vh;
-	left: 2vh;
+	left: 1.5vh;
 }
 
 .ver {
 	position: absolute;
 	color: rgb(180, 180, 180);
 	font-family: Helvetica;
+	font-weight: bold;
 	user-select: none;
 
-	top: 95vh;
+	bottom: 1.5vh;
 	font-size: 3vh;
-	right: 2vh;
+	right: 1.5vh;
 }
