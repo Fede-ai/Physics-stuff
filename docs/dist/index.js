@@ -33,8 +33,19 @@ window.addEventListener('resize', () => {
 document.addEventListener('contextmenu', (event) => {
     event.preventDefault();
 });
+const buttons = document.getElementById('buttons');
+const cr = document.getElementById('cr');
 const ver = document.getElementById('ver');
-ver.textContent = 'v 1.2.6';
+ver.textContent = 'v 1.2.8';
+buttons.addEventListener('touchmove', (event) => {
+    event.preventDefault();
+});
+cr.addEventListener('touchmove', (event) => {
+    event.preventDefault();
+});
+ver.addEventListener('touchmove', (event) => {
+    event.preventDefault();
+});
 const back = document.getElementById('back');
 const draw = document.getElementById('draw');
 draw.style.borderColor = "rgb(160, 40, 40)";
@@ -132,7 +143,7 @@ function startAction(x, y, b) {
 document.addEventListener('mousemove', (event) => {
     performAction(event.clientX, event.clientY);
 });
-document.addEventListener('touchmove', (event) => {
+canvas.addEventListener('touchmove', (event) => {
     event.preventDefault();
     if (event.touches.length == 1) {
         let touch = event.touches[0];
