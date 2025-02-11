@@ -30,31 +30,11 @@ window.addEventListener('resize', () => {
     resetGraph();
 });
 //disable context menu (right click is used to move)
-window.addEventListener('contextmenu', (event) => {
+document.addEventListener('contextmenu', (event) => {
     event.preventDefault();
 });
-const buttons = document.getElementById('buttons');
-const cr = document.getElementById('cr');
 const ver = document.getElementById('ver');
-ver.textContent = 'v 1.2.4';
-buttons.addEventListener('wheel', (event) => {
-    event.preventDefault();
-});
-cr.addEventListener('wheel', (event) => {
-    event.preventDefault();
-});
-ver.addEventListener('wheel', (event) => {
-    event.preventDefault();
-});
-buttons.addEventListener('touchmove', (event) => {
-    event.preventDefault();
-});
-cr.addEventListener('touchmove', (event) => {
-    event.preventDefault();
-});
-ver.addEventListener('touchmove', (event) => {
-    event.preventDefault();
-});
+ver.textContent = 'v 1.2.6';
 const back = document.getElementById('back');
 const draw = document.getElementById('draw');
 draw.style.borderColor = "rgb(160, 40, 40)";
@@ -149,10 +129,10 @@ function startAction(x, y, b) {
     }
 }
 //write, draw, move or zoom
-canvas.addEventListener('mousemove', (event) => {
+document.addEventListener('mousemove', (event) => {
     performAction(event.clientX, event.clientY);
 });
-canvas.addEventListener('touchmove', (event) => {
+document.addEventListener('touchmove', (event) => {
     event.preventDefault();
     if (event.touches.length == 1) {
         let touch = event.touches[0];
@@ -167,10 +147,10 @@ canvas.addEventListener('touchmove', (event) => {
         touchesDistance = newDistance;
     }
 });
-canvas.addEventListener('wheel', (event) => {
+document.addEventListener('wheel', (event) => {
     event.preventDefault();
     performZoom(event.deltaY);
-});
+}, { passive: false });
 function performZoom(delta) {
     const startZoom = zoom;
     zoom *= (1 + delta / 1000);
@@ -191,6 +171,7 @@ let lastMove = now, lastDraw = now, lastErase = now;
 const moveInt = 25, drawInt = 8, eraseInt = 40;
 function performAction(x, y) {
     const currentTime = performance.now();
+    //move
     if (isMoving && currentTime - lastMove > moveInt) {
         center.x += x - lastMousePos.x;
         center.y += y - lastMousePos.y;
@@ -198,18 +179,39 @@ function performAction(x, y) {
         lastMousePos = { x, y };
         resetGraph();
     }
+    //draw
     if (isDrawing && currentTime - lastDraw > drawInt) {
         const p = { x: (x - center.x) * zoom, y: (y - center.y) * zoom };
         const n = currentLine.length;
         //stop drawing not to everlap other functions
-        if (p.x > rightBound || p.x < leftBound ||
-            (direction == 'r' && p.x < currentLine[n - 1].x) ||
-            (direction == 'l' && p.x > currentLine[n - 1].x)) {
+        if (p.x > rightBound || p.x < leftBound) {
             isDrawing = false;
             finalizeLine(currentLine);
             currentLine = [];
             resetGraph();
             return;
+        }
+        else if (direction == 'r' && p.x < currentLine[n - 1].x) {
+            if (p.x < currentLine[n - 1].x - 25 * zoom) {
+                isDrawing = false;
+                finalizeLine(currentLine);
+                currentLine = [];
+                resetGraph();
+                return;
+            }
+            else
+                p.x = currentLine[n - 1].x;
+        }
+        else if (direction == 'l' && p.x > currentLine[n - 1].x) {
+            if (p.x > currentLine[n - 1].x + 25 * zoom) {
+                isDrawing = false;
+                finalizeLine(currentLine);
+                currentLine = [];
+                resetGraph();
+                return;
+            }
+            else
+                p.x = currentLine[n - 1].x;
         }
         //draw segment to join the new point
         ctx.beginPath();
@@ -229,6 +231,7 @@ function performAction(x, y) {
             direction = 'l';
         lastDraw = currentTime;
     }
+    //erase
     if (isErasing && currentTime - lastErase > eraseInt) {
         resetGraph();
         ctx.beginPath();
